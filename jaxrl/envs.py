@@ -17,7 +17,7 @@ class FlattenObservationShadowhandWrapper(gym.ObservationWrapper):
         return np.concatenate((obs['observation'], obs['desired_goal']), axis=-1)
 
 def _make_env_dmc(env_name: str, seed: int = 0) -> gym.Env:
-    from jaxrl.additional_tasks.tasks import cheetah, walker, hopper, reacher, ball_in_cup, pendulum, fish
+    from dmc_envs.tasks import cheetah, walker, hopper, reacher, ball_in_cup, pendulum, fish
     from dm_control import suite
     suite.ALL_TASKS = suite.ALL_TASKS + suite._get_tasks('custom')
     suite.TASKS_BY_DOMAIN = suite._get_tasks_by_domain(suite.ALL_TASKS)
@@ -51,7 +51,7 @@ def _make_env_humanoidbench(env_name: str, seed: int = 0) -> gym.Env:
     return env
 
 def _make_env_shadowhand(env_name: str, seed: int = 0) -> gym.Env:
-    from jaxrl.additional_tasks import dex_envs
+    import dex_envs
     env_version = 'v1'
     reward_type = 'sparse'
     name = f'{env_name}-rotate-{env_version}'
