@@ -333,10 +333,11 @@ EnvironmentsDict = {
     }
 
 def get_environment_list(env_names: str | list):
-    if env_names in EnvironmentsDict.keys():
-        return EnvironmentsDict[env_names]
-    elif isinstance(env_names, str):
-        return [env_names]
+    if isinstance(env_names, str):
+        if env_names in EnvironmentsDict.keys():
+            return EnvironmentsDict[env_names]
+        else:
+            return [env_names]
     elif isinstance(env_names, list):
         return env_names
     

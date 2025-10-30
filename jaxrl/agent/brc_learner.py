@@ -8,7 +8,7 @@ import optax
 
 from jaxrl.agent.update import build_actor_input, update_actor, update_critic, update_target_critic, update_temperature
 
-from jaxrl.networks import NormalTanhPolicy, DoubleCriticTest, Temperature
+from jaxrl.networks import NormalTanhPolicy, Critic, Temperature
 from jaxrl.utils import Model, PRNGKey, Batch
 
 
@@ -138,7 +138,7 @@ class BRC(object):
         width_critic: int = 512,
         width_actor: int = 256,
         num_bins: int = 101,
-        v_max: float = 10.0
+        v_max: float = 10.0,
     ) -> None:
         
         action_dim = actions.shape[-1]
@@ -164,8 +164,7 @@ class BRC(object):
             rng = jax.random.PRNGKey(seed)
             rng, actor_key, critic_key, temp_key = jax.random.split(rng, 4)
             actor_def = NormalTanhPolicy(action_dim=action_dim, hidden_dims=width_actor)
-            critic_def = DoubleCriticTest(num_tasks=num_tasks, embedding_size=embedding_size, ensemble_size=2, hidden_dims=width_critic, depth=2, output_nodes=num_bins, multitask=self.multitask)
-            
+            critic_def = Critic(num_tasks=num_tasks, embedding_size=embedding_size, ensemble_size=ensemble_size, hidden_dims=width_critic, depth=2, output_nodes=num_bins, multitask=self.multitask)
             actor = Model.create(actor_def, inputs=[actor_key, actor_init], tx=optax.adamw(learning_rate=actor_lr))
             critic = Model.create(critic_def, inputs=[critic_key, observations, actions, task_ids_init], tx=optax.adamw(learning_rate=critic_lr))
             target_critic = Model.create(critic_def, inputs=[critic_key, observations, actions, task_ids_init])

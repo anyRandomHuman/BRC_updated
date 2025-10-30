@@ -1,7 +1,6 @@
 import numpy as np
 import wandb
 
-
 def log_to_wandb(step: int, infos: dict, suffix: str = ''):
     dict_to_log = {'timestep': step}
     for info_key in infos:
@@ -49,7 +48,7 @@ class EpisodeRecorder:
     
     def log(self, FLAGS, agent, replay_buffer, reward_normalizer, step, eval_env=None, render=False):
         batches_info = replay_buffer.sample_task_batches()
-        batches_info = reward_normalizer.normalize(batches_info, agent.get_temperature())
+        batches_info = reward_normalizer.normalize(batches_info)
         infos = agent.get_infos(batches_info)
         infos_online_eval = self._get_scores()
         infos = {**infos, **infos_online_eval}

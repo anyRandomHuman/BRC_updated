@@ -83,10 +83,10 @@ class QValueEnsemble(nn.Module):
         q_values = self.q_value_ensemble(inputs)
         return q_values
     
-class DoubleCriticTest(nn.Module):
+class Critic(nn.Module):
     num_tasks: int
     embedding_size: int
-    ensemble_size: int
+    ensemble_size: int = 2
     hidden_dims: int = 512
     depth: int = 2
     activations: Callable[[jnp.ndarray], jnp.ndarray] = nn.relu
@@ -114,43 +114,6 @@ class DoubleCriticTest(nn.Module):
             inputs = jnp.concatenate((observations, actions, task_embedding), axis=-1)            
         q_values = self.q_value_ensemble(inputs)
         return q_values
-    
-class DoubleCritic(nn.Module):
-    num_tasks: int
-    embedding_size: int
-    hidden_dims: int = 512
-    depth: int = 2
-    activations: Callable[[jnp.ndarray], jnp.ndarray] = nn.relu
-    output_nodes: int = 101
-    multitask: bool = False
-    
-    def setup(self):
-        if self.multitask:
-            self.task_embedding = TaskEmbedding(self.num_tasks, self.embedding_size)
-        self.critic1 = QValue(
-            self.hidden_dims, 
-            self.depth,
-            activations=self.activations,
-            output_nodes=self.output_nodes,
-        )
-        self.critic2 = QValue(
-            self.hidden_dims, 
-            self.depth,
-            activations=self.activations,
-            output_nodes=self.output_nodes,
-        )
-
-    def __call__(self, observations: jnp.ndarray, actions: jnp.ndarray, task_ids: jnp.ndarray, return_embeddings: bool = False):
-        if self.multitask is False:
-            inputs = jnp.concatenate((observations, actions), axis=-1)
-        else:
-            task_embedding = self.task_embedding(task_ids)
-            if return_embeddings:
-                return task_embedding
-            inputs = jnp.concatenate((observations, actions, task_embedding), axis=-1)            
-        q_value1 = self.critic1(inputs)
-        q_value2 = self.critic2(inputs)
-        return q_value1, q_value2
 
 class NormalTanhPolicy(nn.Module):
     action_dim: int

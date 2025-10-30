@@ -17,7 +17,10 @@ class FlattenObservationShadowhandWrapper(gym.ObservationWrapper):
         return np.concatenate((obs['observation'], obs['desired_goal']), axis=-1)
 
 def _make_env_dmc(env_name: str, seed: int = 0) -> gym.Env:
-    from dmc_envs.tasks import cheetah, walker, hopper, reacher, ball_in_cup, pendulum, fish
+    try:
+        from dmc_envs.tasks import cheetah, walker, hopper, reacher, ball_in_cup, pendulum, fish
+    except:
+        print('Could not load additional DMC tasks')
     from dm_control import suite
     suite.ALL_TASKS = suite.ALL_TASKS + suite._get_tasks('custom')
     suite.TASKS_BY_DOMAIN = suite._get_tasks_by_domain(suite.ALL_TASKS)
