@@ -66,8 +66,8 @@ def main(_):
 
     replay_buffer = ParallelReplayBuffer(env.observation_space, env.action_space.shape[-1], FLAGS.replay_buffer_size, num_tasks=num_tasks)   
     
-    reward_normalizer = RewardNormalizer(num_tasks, discount=agent.discount)
-
+    reward_normalizer = RewardNormalizer(num_tasks, target_entropy=agent.target_entropy, discount=agent.discount)
+        
     statistics_recorder = EpisodeRecorder(num_tasks)
     
     observations = env.reset()
@@ -83,7 +83,7 @@ def main(_):
         observations, terms, truns = env.reset_where_done(observations, terms, truns)
         if i >= FLAGS.start_training:
             batches = replay_buffer.sample(batch_size, FLAGS.updates_per_step)
-            batches = reward_normalizer.normalize(batches)
+            batches = reward_normalizer.normalize(batches, agent.get_temperature())
             _ = agent.update(batches, FLAGS.updates_per_step, i)
             if i % eval_interval == 0 and i >= FLAGS.start_training:  
                 info_dict = statistics_recorder.log(FLAGS, agent, replay_buffer, reward_normalizer, i, eval_env, render=FLAGS.render)
