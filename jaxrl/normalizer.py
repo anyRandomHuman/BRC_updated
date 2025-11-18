@@ -3,15 +3,15 @@ from jaxrl.utils import Batch
 
 class RewardNormalizer(object):
     def __init__(self, num_seeds: int, target_entropy: float, discount: float = 0.99, v_max: float = 10.0, max_steps: int | None = None):
-        self.returns_min_norm = np.zeros(num_seeds) + np.inf
-        self.returns_max_norm = np.zeros(num_seeds) - np.inf           
+        self.returns_min_norm = np.zeros(num_seeds, dtype=np.float32) + np.inf
+        self.returns_max_norm = np.zeros(num_seeds, dtype=np.float32) - np.inf           
         self.effective_horizon = 1 / (1 - discount)
         self.discount = discount
         self.v_max = v_max
         self.target_entropy = target_entropy        
         self.max_steps = max_steps
         self.step = 0
-        self.rewards = np.zeros((num_seeds, max_steps)) if max_steps is not None else [[] for _ in range(num_seeds)]
+        self.rewards = np.zeros((num_seeds, max_steps), dtype=np.float32) if max_steps is not None else [[] for _ in range(num_seeds)]
         
     def _calculate_returns_variable_length_trajectory(self, rewards_traj: list, truncate: bool):
         values = np.zeros_like(rewards_traj)
@@ -22,7 +22,7 @@ class RewardNormalizer(object):
         return values.min(axis=-1), values.max(axis=-1)
     
     def _calculate_returns_fixed_length_trajectory(self):
-        values = np.zeros_like(self.rewards)
+        values = np.zeros_like(self.rewards, dtype=np.float32)
         bootstrap = self.rewards.mean(-1) * self.effective_horizon
         for i in reversed(range(values.shape[-1])):
             values[:, i] = self.rewards[:, i] + self.discount * bootstrap
