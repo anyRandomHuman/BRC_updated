@@ -31,7 +31,8 @@ def _make_env_dmc(env_name: str, seed: int = 0) -> gym.Env:
         task_name=task_name,
         task_kwargs={'random': seed},
     )
-    env = DmControlCompatibilityV0(env, render_mode='rgb_array', render_kwargs={'camera_id': 1})
+    # render_kwargs={'camera_id': 1}, render_mode='rgb_array'
+    env = DmControlCompatibilityV0(env)
     if isinstance(env.observation_space, gym.spaces.Dict):
         env = FlattenObservation(env)
     env = RescaleAction(env, -1.0, 1.0)
