@@ -50,6 +50,11 @@ class EpisodeRecorder:
         batches_info = replay_buffer.sample_task_batches()
         if reward_normalizer:
             batches_info = reward_normalizer.normalize(batches_info, agent.get_temperature())
+            wandb.log({f'seed{i}/reward_max_norm': reward_normalizer.returns_max_norm[i] for i in
+                       range(reward_normalizer.returns_max_norm.shape[0])}, step=step)
+            wandb.log({f'seed{i}/reward_min_norm': reward_normalizer.returns_min_norm[i] for i in
+                       range(reward_normalizer.returns_max_norm.shape[0])}, step=step)
+            wandb.log({f'normed_reward_{i}': v for i, v in enumerate(batches_info.rewards.mean(axis=1))}, step=step)
         infos = agent.get_infos(batches_info)
         infos_online_eval = self._get_scores()
         infos = {**infos, **infos_online_eval}
@@ -61,4 +66,3 @@ class EpisodeRecorder:
         if FLAGS.log_to_wandb:
             log_to_wandb(step, infos)
         return infos
-    
