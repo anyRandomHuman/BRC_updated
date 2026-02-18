@@ -175,6 +175,21 @@ HB_NOHANDS = [
     'h1-maze-v0'
     ]
 
+HB_BASIC = [
+    'h1-walk-v0',
+    'h1-stand-v0',
+    'h1-pole-v0',
+    ]
+
+HB_NOHANDS = [
+    'h1-walk-v0',
+    'h1-stand-v0',
+    'h1-run-v0',
+    'h1-pole-v0',
+    'h1-slide-v0',
+    'h1-maze-v0'
+    ]
+
 HB_HANDS = [   
     'h1hand-walk-v0', 
     'h1hand-stand-v0',
