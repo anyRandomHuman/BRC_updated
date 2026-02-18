@@ -27,6 +27,10 @@ flags.DEFINE_boolean('render', True, 'Whether to log the rendering to wandb.')
 flags.DEFINE_integer('updates_per_step', 2, 'Number of updates per step.')
 flags.DEFINE_integer('width_critic', 4096, 'Width of the critic network.')
 flags.DEFINE_string('save_path', '', 'Environment name.')
+flags.DEFINE_string('disable_jit', 'False', 'disable_jit')
+flags.DEFINE_float('v_max', '-10', 'v_max')
+flags.DEFINE_string('normalize', 'True', 'normalize reward')
+
 
 
 def main(_):
@@ -67,9 +71,10 @@ def main(_):
 
     replay_buffer = ParallelReplayBuffer(env.observation_space, env.action_space.shape[-1], FLAGS.replay_buffer_size,
                                          num_tasks=num_tasks)
-
-    reward_normalizer = RewardNormalizer(num_tasks, target_entropy=agent.target_entropy, discount=agent.discount)
-
+    if FLAGS.normalize:
+        reward_normalizer = RewardNormalizer(num_tasks, target_entropy=agent.target_entropy, discount=agent.discount)
+    else:
+        reward_normalizer = None
     statistics_recorder = EpisodeRecorder(num_tasks)
 
     observations = env.reset()
@@ -89,11 +94,16 @@ def main(_):
     save_path = f'{save_dir}/{FLAGS.save_path}/{FLAGS.seed}'
     os.makedirs(save_path, exist_ok=True)
 
+    if FLAGS.disable_jit:
+        import jax
+        jax.config.update("jax_disable_jit", True)
+
     for i in range(1, FLAGS.max_steps + 1):
         actions = env.action_space.sample() if i < FLAGS.start_training else agent.sample_actions(observations,
                                                                                                   temperature=1.0)
         next_observations, rewards, terms, truns, goals = env.step(actions)
-        reward_normalizer.update(rewards, terms, truns)
+        if FLAGS.normalize:
+            reward_normalizer.update(rewards, terms, truns)
         statistics_recorder.update(rewards, goals, terms, truns)
         masks = env.generate_masks(terms, truns)
         replay_buffer.insert(observations, actions, rewards, masks, next_observations)
@@ -101,7 +111,8 @@ def main(_):
         observations, terms, truns = env.reset_where_done(observations, terms, truns)
         if i >= FLAGS.start_training:
             batches = replay_buffer.sample(batch_size, FLAGS.updates_per_step)
-            batches = reward_normalizer.normalize(batches, agent.get_temperature())
+            if FLAGS.normalize:
+                batches = reward_normalizer.normalize(batches, agent.get_temperature())
             _ = agent.update(batches, FLAGS.updates_per_step, i)
             if i % eval_interval == 0 and i >= FLAGS.start_training:
                 info_dict = statistics_recorder.log(FLAGS, agent, replay_buffer, reward_normalizer, i, eval_env,
