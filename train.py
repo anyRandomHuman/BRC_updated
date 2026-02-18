@@ -29,7 +29,8 @@ flags.DEFINE_integer('width_critic', 4096, 'Width of the critic network.')
 flags.DEFINE_string('save_path', '', 'Environment name.')
 flags.DEFINE_string('disable_jit', 'False', 'disable_jit')
 flags.DEFINE_float('v_max', '10', 'v_max')
-flags.DEFINE_string('normalize', 'True', 'normalize reward')
+flags.DEFINE_boolean('normalize', True, 'normalize reward')
+flags.DEFINE_string('job_type', 'default', 'job_type')
 
 
 
@@ -41,7 +42,8 @@ def main(_):
             entity='crusaderx',
             project='BRC',
             group=f'{FLAGS.env_names}',
-            name=f'{FLAGS.env_names}_{FLAGS.seed}'
+            name=f'{FLAGS.env_names}_{FLAGS.seed}',
+            job_type=FLAGS.job_type,
         )
 
     env_names = get_environment_list(FLAGS.env_names)
