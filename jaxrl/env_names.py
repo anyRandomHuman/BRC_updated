@@ -181,7 +181,7 @@ HB_BASIC = [
     'h1-pole-v0',
     ]
 
-HB_NOHANDS = [
+HB_EASY = [
     'h1-walk-v0',
     'h1-stand-v0',
     'h1-run-v0',
