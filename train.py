@@ -28,7 +28,7 @@ flags.DEFINE_integer('updates_per_step', 2, 'Number of updates per step.')
 flags.DEFINE_integer('width_critic', 4096, 'Width of the critic network.')
 flags.DEFINE_string('save_path', '', 'Environment name.')
 flags.DEFINE_string('disable_jit', 'False', 'disable_jit')
-flags.DEFINE_float('v_max', '-10', 'v_max')
+flags.DEFINE_float('v_max', '10', 'v_max')
 flags.DEFINE_string('normalize', 'True', 'normalize reward')
 
 
@@ -65,6 +65,7 @@ def main(_):
         env.observation_space.sample()[:1],
         env.action_space.sample()[:1],
         num_tasks=num_tasks,
+        v_max=FLAGS.v_max,
         **kwargs,
     )
     batch_size = 1024 if agent.multitask else 256
