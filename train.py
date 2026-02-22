@@ -120,7 +120,7 @@ def main(_):
             if i % eval_interval == 0 and i >= FLAGS.start_training:
                 info_dict = statistics_recorder.log(FLAGS, agent, replay_buffer, reward_normalizer, i, eval_env,
                                                     render=FLAGS.render)
-        if i > (FLAGS.max_steps / 2) and i % (FLAGS.max_steps / 10):
+        if i > (FLAGS.max_steps / 2) and not i % (FLAGS.max_steps / 3):
             agent.save(save_path)
 
     agent.save(save_path)
