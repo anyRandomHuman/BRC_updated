@@ -31,6 +31,7 @@ flags.DEFINE_boolean('disable_jit', False, 'disable_jit')
 flags.DEFINE_float('v_max', 10.0, 'v_max')
 flags.DEFINE_boolean('normalize', True, 'normalize reward')
 flags.DEFINE_string('job_type', 'default', 'job_type')
+flags.DEFINE_boolean('log_loss', False, 'Whether to use logarithum of loss.')
 
 
 
@@ -59,6 +60,7 @@ def main(_):
     kwargs = {}
     kwargs['updates_per_step'] = FLAGS.updates_per_step
     kwargs['width_critic'] = FLAGS.width_critic
+    kwargs['log_loss'] = FLAGS.log_loss
 
     num_tasks = len(env.envs)
 
