@@ -23,7 +23,7 @@ flags.DEFINE_integer('start_training', 5000, 'Number of training steps to start 
 flags.DEFINE_string('env_names', 'cheetah-run', 'Environment name.')
 flags.DEFINE_boolean('log_to_wandb', True, 'Whether to log to wandb.')
 flags.DEFINE_boolean('offline_evaluation', True, 'Whether to perform evaluations with temperature=0.')
-flags.DEFINE_boolean('render', True, 'Whether to log the rendering to wandb.')
+flags.DEFINE_boolean('render', False, 'Whether to log the rendering to wandb.')
 flags.DEFINE_integer('updates_per_step', 2, 'Number of updates per step.')
 flags.DEFINE_integer('width_critic', 4096, 'Width of the critic network.')
 flags.DEFINE_string('save_path', '', 'Environment name.')
