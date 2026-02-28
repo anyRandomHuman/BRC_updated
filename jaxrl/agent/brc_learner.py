@@ -12,8 +12,8 @@ from jaxrl.networks import NormalTanhPolicy, Critic, Temperature
 from jaxrl.utils import Model, PRNGKey, Batch
 
 
-@functools.partial(jax.jit, static_argnames=('discount', 'target_entropy', 'num_bins', 'v_max', 'multitask', 'log_loss'),)
-@functools.partial(jax.vmap, in_axes=(None, None, None, None, None, 0, None, None, None, None, None, None))
+@functools.partial(jax.jit, static_argnames=('discount', 'target_entropy', 'num_bins', 'v_max', 'multitask'),)
+@functools.partial(jax.vmap, in_axes=(None, None, None, None, None, 0, None, None, None, None, None))
 def _get_infos(
     rng: PRNGKey, 
     actor: Model, 
@@ -25,8 +25,7 @@ def _get_infos(
     target_entropy: float, 
     num_bins: int, 
     v_max: float,
-    multitask: bool,
-    log_loss
+    multitask: bool
 ):
     rng, actor_key, critic_key = jax.random.split(rng, 3)
     _, critic_info = update_critic(critic_key, actor, critic, target_critic, temp, batch, discount, num_bins, v_max, multitask)
@@ -67,13 +66,12 @@ def _update(
     target_entropy: float, 
     num_bins: int, 
     v_max: float,
-    multitask: bool,
-    log_loss
+    multitask: bool
 ):
     rng, actor_key, critic_key = jax.random.split(rng, 3)
-    new_critic, critic_info = update_critic(critic_key, actor, critic, target_critic, temp, batch, discount, num_bins, v_max, multitask, log_loss)
+    new_critic, critic_info = update_critic(critic_key, actor, critic, target_critic, temp, batch, discount, num_bins, v_max, multitask)
     new_target_critic = update_target_critic(new_critic, target_critic, tau)
-    new_actor, actor_info = update_actor(actor_key, actor, new_critic, temp, batch, num_bins, v_max, multitask, log_loss)
+    new_actor, actor_info = update_actor(actor_key, actor, new_critic, temp, batch, num_bins, v_max, multitask) 
     new_temp, alpha_info = update_temperature(temp, actor_info['entropy'], target_entropy)
     return rng, new_actor, new_critic, new_target_critic, new_temp, {
         **critic_info,
@@ -81,7 +79,7 @@ def _update(
         **alpha_info,
     }
 
-@functools.partial(jax.jit, static_argnames=('discount', 'tau', 'target_entropy', 'num_bins', 'v_max', 'multitask', 'num_updates', 'log_loss'))
+@functools.partial(jax.jit, static_argnames=('discount', 'tau', 'target_entropy', 'num_bins', 'v_max', 'multitask', 'num_updates'))
 def _do_multiple_updates(
     rng: PRNGKey,
     actor: Model,
@@ -96,8 +94,7 @@ def _do_multiple_updates(
     v_max: float,
     multitask: bool, 
     step: int,    
-    num_updates: int,
-    log_loss
+    num_updates: int
 ):
     def one_step(i, state):
         step, rng, actor, critic, target_critic, temp, info = state
@@ -114,8 +111,7 @@ def _do_multiple_updates(
             target_entropy,
             num_bins,
             v_max,
-            multitask,
-            log_loss
+            multitask
         )
         return step, new_rng, new_actor, new_critic, new_target_critic, new_temp, info
 
@@ -143,7 +139,6 @@ class BRC(object):
         width_actor: int = 256,
         num_bins: int = 101,
         v_max: float = 10.0,
-        log_loss = False
     ) -> None:
         
         action_dim = actions.shape[-1]
@@ -162,7 +157,6 @@ class BRC(object):
         task_embedding_init = jnp.zeros((1, embedding_size))
         task_ids_init = self.task_ids[:1]
         self.multitask = True if num_tasks > 1 else False
-        self.log_loss = log_loss
         
         actor_init = jnp.concatenate((observations, task_embedding_init), axis=-1) if self.multitask else observations
         
@@ -204,8 +198,7 @@ class BRC(object):
             self.v_max,
             self.multitask,
             self.step,
-            num_updates,
-            self.log_loss
+            num_updates
         )
         self.step = step
         self.rng = rng

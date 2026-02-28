@@ -11,7 +11,7 @@ def build_actor_input(critic: Model, observations: jnp.ndarray, task_ids: jnp.nd
         inputs = jnp.concatenate((inputs, task_embeddings), axis=-1)
     return inputs
 
-def update_actor(key: PRNGKey, actor: Model, critic: Model, temp: Model, batch: Batch, num_bins: int, v_max: float, multitask: bool, log_loss=False):
+def update_actor(key: PRNGKey, actor: Model, critic: Model, temp: Model, batch: Batch, num_bins: int, v_max: float, multitask: bool):
     inputs = build_actor_input(critic, batch.observations, batch.task_ids, multitask)
     def actor_loss_fn(actor_params: Params):
         dist = actor.apply({'params': actor_params}, inputs)        
@@ -21,8 +21,6 @@ def update_actor(key: PRNGKey, actor: Model, critic: Model, temp: Model, batch: 
         bin_values = jnp.linspace(start=-v_max, stop=v_max, num=num_bins)[None]
         q_values = (bin_values * q_probs).sum(-1)    
         actor_loss = (log_probs * temp().mean() - q_values).mean()
-        if log_loss:
-            actor_loss = jnp.log(actor_loss)
         return actor_loss, {
             'actor_loss': actor_loss,
             'entropy': -log_probs.mean(),
@@ -33,7 +31,7 @@ def update_actor(key: PRNGKey, actor: Model, critic: Model, temp: Model, batch: 
     return new_actor, info
 
 def update_critic(key: PRNGKey, actor: Model, critic: Model, target_critic: Model,
-           temp: Model, batch: Batch, discount: float, num_bins: int, v_max: float, multitask: bool, log_loss=False):
+           temp: Model, batch: Batch, discount: float, num_bins: int, v_max: float, multitask: bool):
     inputs = build_actor_input(critic, batch.next_observations, batch.task_ids, multitask)
     dist = actor(inputs)
     next_actions, next_log_probs = dist.sample_and_log_prob(seed=key)
@@ -60,8 +58,6 @@ def update_critic(key: PRNGKey, actor: Model, critic: Model, target_critic: Mode
         q_logits = critic.apply({"params": critic_params}, batch.observations, batch.actions, batch.task_ids)
         q_logprobs = jax.nn.log_softmax(q_logits, axis=-1)
         critic_loss = -(target_probs[None] * q_logprobs).sum(-1).mean(-1).sum(-1)
-        if log_loss:
-            critic_loss = jnp.log(critic_loss)
         return critic_loss, {
             "critic_loss": critic_loss,
             "q_mean": q_value_target.mean(),
