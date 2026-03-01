@@ -41,18 +41,40 @@ class ParallelReplayBuffer:
                      rewards=rewards,
                      masks=masks,
                      next_observations=next_observations,
-                     task_ids=task_indx)    
+                     task_ids=task_indx)
 
     def sample_task_batches(self):
         batch_size = 32
-        indxs = np.random.randint(self.size, size=batch_size)        
+        indxs = np.random.randint(self.size, size=batch_size)
         task_ids = np.zeros((self.num_tasks, batch_size), dtype=np.int32) + np.arange(self.num_tasks, dtype=np.int32)[:, None]
         return Batch(observations=self.observations[:, indxs],
                      actions=self.actions[:, indxs],
                      rewards=self.rewards[:, indxs],
                      masks=self.masks[:, indxs],
                      next_observations=self.next_observations[:, indxs],
-                     task_ids=task_ids)  
+                     task_ids=task_ids)
+
+    def sample_equal_task_batches(self, batch_size, num_batches):
+        per_task_batch_size = batch_size // self.num_tasks
+        sampled_indices = np.random.randint(0, self.size, size=(num_batches, self.num_tasks, per_task_batch_size))
+        task_indices = np.arange(self.num_tasks)[None, :, None]
+        # indxs = np.random.randint(self.size, size=(num_batches, per_task_batch_size))
+        task_ids = np.arange(self.num_tasks)[None, :, None].repeat(num_batches, axis=0).repeat(per_task_batch_size, axis=2)
+        return Batch(observations=self.observations[task_indices, sampled_indices],
+                     actions=self.actions[task_indices, sampled_indices],
+                     rewards=self.rewards[task_indices, sampled_indices],
+                     masks=self.masks[task_indices, sampled_indices],
+                     next_observations=self.next_observations[task_indices, sampled_indices],
+                     task_ids=task_ids)
+
+        # indxs = np.random.randint(self.size, size=(self.num_tasks, per_task_batch_size))
+        # task_ids = np.zeros((self.num_tasks, per_task_batch_size), dtype=np.int32) + np.arange(self.num_tasks, dtype=np.int32)[:, None]
+        # return Batch(observations=np.take_along_axis(self.observations, indxs[..., None], axis=1),
+        #              actions=np.take_along_axis(self.actions, indxs[..., None], axis=1),
+        #              rewards=np.take_along_axis(self.rewards, indxs, axis=1),
+        #              masks=np.take_along_axis(self.masks, indxs, axis=1),
+        #              next_observations=np.take_along_axis(self.next_observations, indxs[..., None], axis=1),
+        #              task_ids=task_ids)
         
     def save(self, save_dir: str):
         data_path = os.path.join(save_dir, 'buffer')

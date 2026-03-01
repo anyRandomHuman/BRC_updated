@@ -6,7 +6,8 @@ import jax.numpy as jnp
 import numpy as np
 import optax
 
-from jaxrl.agent.update import build_actor_input, update_actor, update_critic, update_target_critic, update_temperature
+from jaxrl.agent.update import build_actor_input, update_actor, update_critic, update_target_critic, update_temperature, \
+    update_critic_famo, update_actor_famo
 
 from jaxrl.networks import NormalTanhPolicy, Critic, Temperature
 from jaxrl.utils import Model, PRNGKey, Batch
@@ -66,20 +67,31 @@ def _update(
     target_entropy: float, 
     num_bins: int, 
     v_max: float,
-    multitask: bool
+    multitask: bool,
+    cw_state,
+    famo,
 ):
     rng, actor_key, critic_key = jax.random.split(rng, 3)
-    new_critic, critic_info = update_critic(critic_key, actor, critic, target_critic, temp, batch, discount, num_bins, v_max, multitask)
+    if famo:
+        new_critic, critic_info, cw_state = update_critic_famo(critic_key, actor, critic, target_critic, temp, batch, discount,
+                                                num_bins, v_max, multitask, cw_state)
+        new_actor, actor_info = update_actor_famo(actor_key, actor, new_critic, temp, batch, num_bins, v_max, multitask)
+    else:
+        new_critic, critic_info = update_critic(critic_key, actor, critic, target_critic, temp, batch, discount, num_bins, v_max, multitask)
+        new_actor, actor_info = update_actor(actor_key, actor, new_critic, temp, batch, num_bins, v_max, multitask)
     new_target_critic = update_target_critic(new_critic, target_critic, tau)
-    new_actor, actor_info = update_actor(actor_key, actor, new_critic, temp, batch, num_bins, v_max, multitask) 
     new_temp, alpha_info = update_temperature(temp, actor_info['entropy'], target_entropy)
-    return rng, new_actor, new_critic, new_target_critic, new_temp, {
+
+    returns = (rng, new_actor, new_critic, new_target_critic, new_temp, {
         **critic_info,
         **actor_info,
         **alpha_info,
-    }
+    })
+    if famo:
+        returns += (cw_state,)
+    return returns
 
-@functools.partial(jax.jit, static_argnames=('discount', 'tau', 'target_entropy', 'num_bins', 'v_max', 'multitask', 'num_updates'))
+@functools.partial(jax.jit, static_argnames=('discount', 'tau', 'target_entropy', 'num_bins', 'v_max', 'multitask', 'num_updates', 'famo'))
 def _do_multiple_updates(
     rng: PRNGKey,
     actor: Model,
@@ -94,12 +106,17 @@ def _do_multiple_updates(
     v_max: float,
     multitask: bool, 
     step: int,    
-    num_updates: int
+    num_updates: int,
+    cw_state,
+    famo,
 ):
     def one_step(i, state):
-        step, rng, actor, critic, target_critic, temp, info = state
+        if famo:
+            step, rng, actor, critic, target_critic, temp, info, cw_state = state
+        else:
+            step, rng, actor, critic, target_critic, temp, info = state
         step = step + 1
-        new_rng, new_actor, new_critic, new_target_critic, new_temp, info = _update(
+        returns = _update(
             rng,
             actor,
             critic,
@@ -111,12 +128,26 @@ def _do_multiple_updates(
             target_entropy,
             num_bins,
             v_max,
-            multitask
+            multitask,
+            cw_state,
+            famo,
         )
-        return step, new_rng, new_actor, new_critic, new_target_critic, new_temp, info
+        if famo:
+            new_rng, new_actor, new_critic, new_target_critic, new_temp, info, cw_state = returns
+        else:
+            new_rng, new_actor, new_critic, new_target_critic, new_temp, info = returns
+        return step, *returns
 
-    step, rng, actor, critic, target_critic, temp, info = one_step(0, (step, rng, actor, critic, target_critic, temp, {}))
-    return jax.lax.fori_loop(1, num_updates, one_step, (step, rng, actor, critic, target_critic, temp, info))
+    if famo:
+        inputs = (step, rng, actor, critic, target_critic, temp, {}, cw_state)
+    else:
+        inputs = (step, rng, actor, critic, target_critic, temp, {})
+    outs = one_step(0, inputs)
+    if famo:
+        step, rng, actor, critic, target_critic, temp, info, cw_state = outs
+    else:
+        step, rng, actor, critic, target_critic, temp, info = outs
+    return jax.lax.fori_loop(1, num_updates, one_step, outs)
 
 class BRC(object):
     def __init__(
@@ -139,6 +170,9 @@ class BRC(object):
         width_actor: int = 256,
         num_bins: int = 101,
         v_max: float = 10.0,
+        w_lr =  0.1,
+        w_d = 0.01,
+        famo = False,
     ) -> None:
         
         action_dim = actions.shape[-1]
@@ -175,6 +209,11 @@ class BRC(object):
         self.actor, self.critic, self.target_critic, self.temp, self.rng = self.init_models(self.seed)
         self.step = 1
 
+        from flax.training.train_state import TrainState
+        self.cw_state = TrainState.create(apply_fn=None, params=jnp.zeros(num_tasks),
+                                          tx=optax.adamw(w_lr, weight_decay=w_d))
+        self.famo = famo
+
     def sample_actions(self, observations: np.ndarray, temperature: float = 1.0):
         inputs = build_actor_input(self.critic, observations, self.task_ids, self.multitask)
         rng, actions = _sample_actions(self.rng, self.actor, inputs, temperature)
@@ -184,7 +223,7 @@ class BRC(object):
     
     def update(self, batch: Batch, num_updates: int, env_step: int):
 
-        step, rng, actor, critic, target_critic, temp, info = _do_multiple_updates(
+        returns = _do_multiple_updates(
             self.rng,
             self.actor,
             self.critic,
@@ -198,8 +237,15 @@ class BRC(object):
             self.v_max,
             self.multitask,
             self.step,
-            num_updates
+            num_updates,
+            self.cw_state,
+            self.famo
         )
+        if self.famo:
+            step, rng, actor, critic, target_critic, temp, info, self.cw_state = returns
+        else:
+            step, rng, actor, critic, target_critic, temp, info = returns
+
         self.step = step
         self.rng = rng
         self.actor = actor

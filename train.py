@@ -31,7 +31,7 @@ flags.DEFINE_boolean('disable_jit', False, 'disable_jit')
 flags.DEFINE_float('v_max', 10.0, 'v_max')
 flags.DEFINE_boolean('normalize', True, 'normalize reward')
 flags.DEFINE_string('job_type', 'default', 'job_type')
-
+flags.DEFINE_boolean('famo', False, 'use famo')
 
 
 def main(_):
@@ -59,6 +59,7 @@ def main(_):
     kwargs = {}
     kwargs['updates_per_step'] = FLAGS.updates_per_step
     kwargs['width_critic'] = FLAGS.width_critic
+    kwargs['famo'] = FLAGS.famo
 
     num_tasks = len(env.envs)
 
@@ -113,7 +114,11 @@ def main(_):
         observations = next_observations
         observations, terms, truns = env.reset_where_done(observations, terms, truns)
         if i >= FLAGS.start_training:
-            batches = replay_buffer.sample(batch_size, FLAGS.updates_per_step)
+            if FLAGS.famo:
+                batches = replay_buffer.sample_equal_task_batches(FLAGS.batch_size, FLAGS.updates_per_step)
+            else:
+                batches = replay_buffer.sample(batch_size, FLAGS.updates_per_step)
+
             if FLAGS.normalize:
                 batches = reward_normalizer.normalize(batches, agent.get_temperature())
             _ = agent.update(batches, FLAGS.updates_per_step, i)
