@@ -14,8 +14,8 @@ from jaxrl.env_names import get_environment_list
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('seed', 0, 'Random seed.')
-flags.DEFINE_integer('eval_episodes', 10, 'Number of episodes used for evaluation.')
-flags.DEFINE_integer('eval_interval', 50000, 'Eval interval.')
+flags.DEFINE_integer('eval_episodes', 5, 'Number of episodes used for evaluation.')
+flags.DEFINE_integer('eval_interval', 10000, 'Eval interval.')
 flags.DEFINE_integer('batch_size', 1024, 'Mini batch size.')
 flags.DEFINE_integer('max_steps', 1000000, 'Number of training steps.')
 flags.DEFINE_integer('replay_buffer_size', 1000000, 'Replay buffer size.')

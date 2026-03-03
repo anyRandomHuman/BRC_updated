@@ -115,6 +115,7 @@ def _do_multiple_updates(
             step, rng, actor, critic, target_critic, temp, info, cw_state = state
         else:
             step, rng, actor, critic, target_critic, temp, info = state
+            cw_state = None
         step = step + 1
         returns = _update(
             rng,
