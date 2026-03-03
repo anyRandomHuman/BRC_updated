@@ -53,7 +53,11 @@ class EpisodeRecorder:
             wandb.log({f'seed{i}/reward_max_norm': reward_normalizer.returns_max_norm[i] for i in
                        range(reward_normalizer.returns_max_norm.shape[0])}, step=step)
             wandb.log({f'seed{i}/reward_min_norm': reward_normalizer.returns_min_norm[i] for i in
-                       range(reward_normalizer.returns_max_norm.shape[0])}, step=step)
+                       range(reward_normalizer.returns_min_norm.shape[0])}, step=step)
+            denominator = np.where(reward_normalizer.returns_max_norm > np.abs(reward_normalizer.returns_min_norm), reward_normalizer.returns_max_norm,
+                                   np.abs(reward_normalizer.returns_min_norm))
+            denominator = (denominator - agent.get_temperature() * reward_normalizer.effective_horizon * reward_normalizer.target_entropy / 2) / reward_normalizer.v_max
+            wandb.log({f'denominator_{i}': denominator[i] for i in range(denominator.shape[0])}, step=step)
             wandb.log({f'normed_reward_{i}': v for i, v in enumerate(batches_info.rewards.mean(axis=1))}, step=step)
         infos = agent.get_infos(batches_info)
         infos_online_eval = self._get_scores()
