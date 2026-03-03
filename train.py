@@ -32,6 +32,8 @@ flags.DEFINE_float('v_max', 10.0, 'v_max')
 flags.DEFINE_boolean('normalize', True, 'normalize reward')
 flags.DEFINE_string('job_type', 'default', 'job_type')
 flags.DEFINE_boolean('famo', False, 'use famo')
+flags.DEFINE_float('w_lr', 0.1, 'v_max')
+flags.DEFINE_float('w_d', 0.001, 'v_max')
 
 
 def main(_):
@@ -60,6 +62,8 @@ def main(_):
     kwargs['updates_per_step'] = FLAGS.updates_per_step
     kwargs['width_critic'] = FLAGS.width_critic
     kwargs['famo'] = FLAGS.famo
+    kwargs['w_lr'] = FLAGS.w_lr
+    kwargs['w_d'] = FLAGS.w_d
 
     num_tasks = len(env.envs)
 
