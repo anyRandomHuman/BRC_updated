@@ -63,7 +63,7 @@ class EpisodeRecorder:
         infos = agent.get_infos(batches_info)
         infos_online_eval = self._get_scores()
         infos = {**infos, **infos_online_eval}
-        if FLAGS.offline_evaluation:
+        if FLAGS.offline_evaluation and step % FLAGS.eval_interval == 0:
             eval_stats = eval_env.evaluate(agent, num_episodes=FLAGS.eval_episodes, temperature=0.0, render=render)
             if render:
                 eval_stats['renders'] = get_wandb_video(eval_stats['renders'])

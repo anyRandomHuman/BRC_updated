@@ -16,6 +16,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('seed', 0, 'Random seed.')
 flags.DEFINE_integer('eval_episodes', 5, 'Number of episodes used for evaluation.')
 flags.DEFINE_integer('eval_interval', 10000, 'Eval interval.')
+flags.DEFINE_integer('online_eval_interval', 500, 'online Eval interval.')
 flags.DEFINE_integer('batch_size', 1024, 'Mini batch size.')
 flags.DEFINE_integer('max_steps', 1000000, 'Number of training steps.')
 flags.DEFINE_integer('replay_buffer_size', 1000000, 'Replay buffer size.')
@@ -127,7 +128,7 @@ def main(_):
             if FLAGS.normalize:
                 batches = reward_normalizer.normalize(batches, agent.get_temperature())
             _ = agent.update(batches, FLAGS.updates_per_step, i)
-            if i % eval_interval == 0 and i >= FLAGS.start_training:
+            if (i % eval_interval == 0 or i % FLAGS.online_eval_interval == 0) and i >= FLAGS.start_training:
                 info_dict = statistics_recorder.log(FLAGS, agent, replay_buffer, reward_normalizer, i, eval_env,
                                                     render=FLAGS.render)
         if i > (FLAGS.max_steps / 2) and not i % (FLAGS.max_steps / 3):
