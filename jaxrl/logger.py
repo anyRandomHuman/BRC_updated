@@ -1,11 +1,11 @@
 import numpy as np
 import wandb
 
-def log_to_wandb(step: int, infos: dict, suffix: str = ''):
+def log_to_wandb(step: int, infos: dict, env_names, suffix: str = ''):
     dict_to_log = {'timestep': step}
     for info_key in infos:
         for seed, value in enumerate(infos[info_key]):
-            dict_to_log[f'seed{seed}/{info_key}{suffix}'] = value
+            dict_to_log[f'{env_names[seed]}/{info_key}{suffix}'] = value
     wandb.log(dict_to_log, step=step)
     
 def get_wandb_video(renders: np.ndarray, fps: int = 15):
@@ -17,14 +17,15 @@ def get_wandb_video(renders: np.ndarray, fps: int = 15):
     
 class EpisodeRecorder:
     
-    def __init__(self, num_seeds: int):
+    def __init__(self, num_seeds: int, env_names):
         self.returns_online = np.zeros(num_seeds)
         self.goals_online = np.zeros(num_seeds)
         self.counts = np.zeros(num_seeds)
         self.returns_online_episode = np.zeros(num_seeds)
         self.goals_online_episode = np.zeros(num_seeds)
         self.num_seeds = num_seeds
-        
+        self.env_names = env_names
+
     def update(self, rewards: np.ndarray, goals: np.ndarray, terminals: np.ndarray, truncates: np.ndarray):
         self.returns_online_episode += rewards
         self.goals_online_episode += goals
@@ -50,15 +51,15 @@ class EpisodeRecorder:
         batches_info = replay_buffer.sample_task_batches()
         if reward_normalizer:
             batches_info = reward_normalizer.normalize(batches_info, agent.get_temperature())
-            wandb.log({f'seed{i}/reward_max_norm': reward_normalizer.returns_max_norm[i] for i in
+            wandb.log({f'{self.env_names[i]}/reward_max_norm': reward_normalizer.returns_max_norm[i] for i in
                        range(reward_normalizer.returns_max_norm.shape[0])}, step=step)
-            wandb.log({f'seed{i}/reward_min_norm': reward_normalizer.returns_min_norm[i] for i in
+            wandb.log({f'{self.env_names[i]}/reward_min_norm': reward_normalizer.returns_min_norm[i] for i in
                        range(reward_normalizer.returns_min_norm.shape[0])}, step=step)
             denominator = np.where(reward_normalizer.returns_max_norm > np.abs(reward_normalizer.returns_min_norm), reward_normalizer.returns_max_norm,
                                    np.abs(reward_normalizer.returns_min_norm))
             denominator = (denominator - agent.get_temperature() * reward_normalizer.effective_horizon * reward_normalizer.target_entropy / 2) / reward_normalizer.v_max
-            wandb.log({f'denominator_{i}': denominator[i] for i in range(denominator.shape[0])}, step=step)
-            wandb.log({f'normed_reward_{i}': v for i, v in enumerate(batches_info.rewards.mean(axis=1))}, step=step)
+            wandb.log({f'{self.env_names[i]}/denominator_{i}': denominator[i] for i in range(denominator.shape[0])}, step=step)
+            wandb.log({f'{self.env_names[i]}/normed_reward_{i}': v for i, v in enumerate(batches_info.rewards.mean(axis=1))}, step=step)
         infos = agent.get_infos(batches_info)
         infos_online_eval = self._get_scores()
         infos = {**infos, **infos_online_eval}
@@ -68,5 +69,5 @@ class EpisodeRecorder:
                 eval_stats['renders'] = get_wandb_video(eval_stats['renders'])
             infos = {**infos, **eval_stats}
         if FLAGS.log_to_wandb:
-            log_to_wandb(step, infos)
+            log_to_wandb(step, infos, self.env_names)
         return infos

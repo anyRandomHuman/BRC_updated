@@ -31,6 +31,7 @@ flags.DEFINE_boolean('disable_jit', False, 'disable_jit')
 flags.DEFINE_float('v_max', 10.0, 'v_max')
 flags.DEFINE_boolean('normalize', True, 'normalize reward')
 flags.DEFINE_string('job_type', 'default', 'job_type')
+flags.DEFINE_string('project', 'BRC', 'project')
 flags.DEFINE_boolean('famo', False, 'use famo')
 flags.DEFINE_float('w_lr', 0.1, 'v_max')
 flags.DEFINE_float('w_d', 0.001, 'v_max')
@@ -42,7 +43,7 @@ def main(_):
         wandb.init(
             config=FLAGS,
             entity='crusaderx',
-            project='BRC',
+            project=FLAGS.project,
             group=f'{FLAGS.env_names}',
             name=f'{FLAGS.env_names}_{FLAGS.seed}',
             job_type=FLAGS.job_type,
@@ -83,7 +84,7 @@ def main(_):
         reward_normalizer = RewardNormalizer(num_tasks, target_entropy=agent.target_entropy, discount=agent.discount)
     else:
         reward_normalizer = None
-    statistics_recorder = EpisodeRecorder(num_tasks)
+    statistics_recorder = EpisodeRecorder(num_tasks, env_names)
 
     observations = env.reset()
 
