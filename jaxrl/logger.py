@@ -1,5 +1,6 @@
 import numpy as np
 import wandb
+from jaxrl.log_histogram import WandbCriticCallback
 
 def log_to_wandb(step: int, infos: dict, env_names, suffix: str = ''):
     dict_to_log = {'timestep': step}
@@ -25,6 +26,7 @@ class EpisodeRecorder:
         self.goals_online_episode = np.zeros(num_seeds)
         self.num_seeds = num_seeds
         self.env_names = env_names
+        self.histogram_logger = WandbCriticCallback(num_seeds, env_names, max_history=1000)
 
     def update(self, rewards: np.ndarray, goals: np.ndarray, terminals: np.ndarray, truncates: np.ndarray):
         self.returns_online_episode += rewards
@@ -61,6 +63,8 @@ class EpisodeRecorder:
             wandb.log({f'{self.env_names[i]}/denominator_{i}': denominator[i] for i in range(denominator.shape[0])}, step=step)
             wandb.log({f'{self.env_names[i]}/normed_reward_{i}': v for i, v in enumerate(batches_info.rewards.mean(axis=1))}, step=step)
         infos = agent.get_infos(batches_info)
+        self.histogram_logger._on_step(infos.pop('q_logits').mean(axis=1).mean(axis=1), step)
+        infos |= {'max_reward': replay_buffer.sample_task_batches(batch_size=1024).rewards.max(axis=1)}
         infos_online_eval = self._get_scores()
         infos = {**infos, **infos_online_eval}
         if FLAGS.offline_evaluation and step % FLAGS.eval_interval == 0:

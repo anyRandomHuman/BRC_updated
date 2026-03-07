@@ -43,8 +43,7 @@ class ParallelReplayBuffer:
                      next_observations=next_observations,
                      task_ids=task_indx)
 
-    def sample_task_batches(self):
-        batch_size = 32
+    def sample_task_batches(self, batch_size = 32):
         indxs = np.random.randint(self.size, size=batch_size)
         task_ids = np.zeros((self.num_tasks, batch_size), dtype=np.int32) + np.arange(self.num_tasks, dtype=np.int32)[:, None]
         return Batch(observations=self.observations[:, indxs],

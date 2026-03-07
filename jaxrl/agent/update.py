@@ -67,6 +67,7 @@ def update_critic(key: PRNGKey, actor: Model, critic: Model, target_critic: Mode
             "q_max": q_value_target.max(),
             "r": batch.rewards.mean(),
             "critic_pnorm": tree_norm(critic_params),
+            'q_logits': q_logits,
         }
     new_critic, info = critic.apply_gradient(critic_loss_fn)
     info["critic_gnorm"] = info.pop("grad_norm")
