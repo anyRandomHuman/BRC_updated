@@ -33,9 +33,9 @@ flags.DEFINE_float('v_max', 10.0, 'v_max')
 flags.DEFINE_boolean('normalize', True, 'normalize reward')
 flags.DEFINE_string('job_type', 'default', 'job_type')
 flags.DEFINE_string('project', 'BRC', 'project')
-flags.DEFINE_boolean('famo', False, 'use famo')
 flags.DEFINE_float('w_lr', 0.1, 'v_max')
 flags.DEFINE_float('w_d', 0.001, 'v_max')
+flags.DEFINE_integer('loss_scaling', 0, 'loss scaling: famo=1, loss scaling=2')
 
 
 def main(_):
@@ -63,9 +63,9 @@ def main(_):
     kwargs = {}
     kwargs['updates_per_step'] = FLAGS.updates_per_step
     kwargs['width_critic'] = FLAGS.width_critic
-    kwargs['famo'] = FLAGS.famo
     kwargs['w_lr'] = FLAGS.w_lr
     kwargs['w_d'] = FLAGS.w_d
+    kwargs['famo'] = FLAGS.loss_scaling
 
     num_tasks = len(env.envs)
 
@@ -81,7 +81,7 @@ def main(_):
 
     replay_buffer = ParallelReplayBuffer(env.observation_space, env.action_space.shape[-1], FLAGS.replay_buffer_size,
                                          num_tasks=num_tasks)
-    if FLAGS.normalize:
+    if FLAGS.normalize and not FLAGS.loss_scaling:
         reward_normalizer = RewardNormalizer(num_tasks, target_entropy=agent.target_entropy, discount=agent.discount)
     else:
         reward_normalizer = None
@@ -112,7 +112,7 @@ def main(_):
         actions = env.action_space.sample() if i < FLAGS.start_training else agent.sample_actions(observations,
                                                                                                   temperature=1.0)
         next_observations, rewards, terms, truns, goals = env.step(actions)
-        if FLAGS.normalize:
+        if FLAGS.normalize and not FLAGS.loss_scaling:
             reward_normalizer.update(rewards, terms, truns)
         statistics_recorder.update(rewards, goals, terms, truns)
         masks = env.generate_masks(terms, truns)
@@ -120,12 +120,12 @@ def main(_):
         observations = next_observations
         observations, terms, truns = env.reset_where_done(observations, terms, truns)
         if i >= FLAGS.start_training:
-            if FLAGS.famo:
+            if FLAGS.loss_scaling:
                 batches = replay_buffer.sample_equal_task_batches(FLAGS.batch_size, FLAGS.updates_per_step)
             else:
                 batches = replay_buffer.sample(batch_size, FLAGS.updates_per_step)
 
-            if FLAGS.normalize:
+            if FLAGS.normalize and not FLAGS.loss_scaling:
                 batches = reward_normalizer.normalize(batches, agent.get_temperature())
             _ = agent.update(batches, FLAGS.updates_per_step, i)
             if (i % eval_interval == 0 or i % FLAGS.online_eval_interval == 0) and i >= FLAGS.start_training:

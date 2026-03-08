@@ -1,7 +1,6 @@
 import functools
 import jax.numpy as jnp
 import jax
-from click.core import batch
 
 from jaxrl.utils import Batch, Model, Params, PRNGKey, tree_norm
 
@@ -90,7 +89,7 @@ def update_temperature(temp: Model, entropy: float, target_entropy: float):
 
 
 def update_critic_famo(key: PRNGKey, actor: Model, critic: Model, target_critic: Model,
-                  temp: Model, batch: Batch, discount: float, num_bins: int, v_max: float, multitask: bool, cw_state):
+                  temp: Model, batch: Batch, discount: float, num_bins: int, v_max: float, multitask: bool, cw_state, famo):
     n_tasks = batch.rewards.shape[0]
     per_task_batch = batch.rewards.shape[1]
 
@@ -130,10 +129,16 @@ def update_critic_famo(key: PRNGKey, actor: Model, critic: Model, target_critic:
         q_logprobs = jax.nn.log_softmax(q_logits, axis=-1)
         task_loss = -(target_probs[None] * q_logprobs).sum(-1).sum(axis=0).reshape(n_tasks, per_task_batch).mean(axis=-1)
         # critic_loss = task_loss.mean()
-        weights = jax.nn.softmax(cw_state.params, -1)
-        co = jax.lax.stop_gradient((weights / (task_loss + 1e-8)).sum())
-        weighted_loss = (weights * jnp.log(task_loss + 1e-8) / co)
-        critic_loss = weighted_loss.sum()
+        if famo == 1:
+            weights = jax.nn.softmax(cw_state.params, -1)
+            co = jax.lax.stop_gradient((weights / (task_loss + 1e-8)).sum())
+            weighted_loss = (weights * jnp.log(task_loss + 1e-8) / co)
+            critic_loss = weighted_loss.sum()
+        elif famo == 2:
+            weights = jnp.mean(task_loss) / task_loss
+            weighted_loss = jax.lax.stop_gradient(weights) * task_loss
+            critic_loss = weighted_loss.sum()
+
         return critic_loss, {
             "critic_loss": critic_loss,
             "q_mean": q_value_target.mean(),
@@ -153,21 +158,23 @@ def update_critic_famo(key: PRNGKey, actor: Model, critic: Model, target_critic:
     #     critic_loss = weighted_loss.sum()
     #     return critic_loss, ({}, task_loss)
 
-
     new_critic, info = critic.apply_gradient(critic_loss_fn)
-    task_loss = info['task_loss']
-    info["critic_gnorm"] = info.pop("grad_norm")
+    if famo == 1:
+        task_loss = info['task_loss']
+        info["critic_gnorm"] = info.pop("grad_norm")
 
-    _, new_info = critic_loss_fn(new_critic.params)
-    updated_task_loss = info['task_loss']
-    delta = jax.lax.stop_gradient(jnp.log(task_loss + 1e-8) - jnp.log(updated_task_loss + 1e-8))
+        _, new_info = critic_loss_fn(new_critic.params)
+        updated_task_loss = info['task_loss']
+        delta = jax.lax.stop_gradient(jnp.log(task_loss + 1e-8) - jnp.log(updated_task_loss + 1e-8))
 
-    def softmax_fn(params):
-        return jax.nn.softmax(params, axis=-1)  # axis=-1对应原代码的dim=-1
+        def softmax_fn(params):
+            return jax.nn.softmax(params, axis=-1)  # axis=-1对应原代码的dim=-1
 
-    softmax_out, vjp_fun = jax.vjp(softmax_fn, cw_state.params)
-    d = vjp_fun(delta)[0]  # the return is a tuple
-    cw_state = cw_state.apply_gradients(grads=d)
+        softmax_out, vjp_fun = jax.vjp(softmax_fn, cw_state.params)
+        d = vjp_fun(delta)[0]  # the return is a tuple
+        cw_state = cw_state.apply_gradients(grads=d)
+    if famo == 2:
+        pass
 
     return new_critic, info, cw_state
 

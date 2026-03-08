@@ -74,7 +74,7 @@ def _update(
     rng, actor_key, critic_key = jax.random.split(rng, 3)
     if famo:
         new_critic, critic_info, cw_state = update_critic_famo(critic_key, actor, critic, target_critic, temp, batch, discount,
-                                                num_bins, v_max, multitask, cw_state)
+                                                num_bins, v_max, multitask, cw_state, famo)
         new_actor, actor_info = update_actor_famo(actor_key, actor, new_critic, temp, batch, num_bins, v_max, multitask)
     else:
         new_critic, critic_info = update_critic(critic_key, actor, critic, target_critic, temp, batch, discount, num_bins, v_max, multitask)
@@ -173,7 +173,7 @@ class BRC(object):
         v_max: float = 10.0,
         w_lr =  0.1,
         w_d = 0.01,
-        famo = False,
+        famo = 0,
     ) -> None:
         
         action_dim = actions.shape[-1]
