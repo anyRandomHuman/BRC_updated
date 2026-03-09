@@ -35,7 +35,7 @@ flags.DEFINE_string('job_type', 'default', 'job_type')
 flags.DEFINE_string('project', 'BRC', 'project')
 flags.DEFINE_float('w_lr', 0.1, 'v_max')
 flags.DEFINE_float('w_d', 0.001, 'v_max')
-flags.DEFINE_integer('loss_scaling', 0, 'loss scaling: famo=1, loss scaling=2')
+flags.DEFINE_integer('loss_scaling', 1, 'loss scaling: famo=1, loss scaling=2')
 
 
 def main(_):
