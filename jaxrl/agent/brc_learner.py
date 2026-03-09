@@ -80,7 +80,7 @@ def _update(
         new_critic, critic_info = update_critic(critic_key, actor, critic, target_critic, temp, batch, discount, num_bins, v_max, multitask)
         new_actor, actor_info = update_actor(actor_key, actor, new_critic, temp, batch, num_bins, v_max, multitask)
     new_target_critic = update_target_critic(new_critic, target_critic, tau)
-    new_temp, alpha_info = update_temperature(temp, actor_info['entropy'], target_entropy)
+    new_temp, alpha_info = update_temperature(temp, actor_info['actor_entropy'], target_entropy)
 
     returns = (rng, new_actor, new_critic, new_target_critic, new_temp, {
         **critic_info,

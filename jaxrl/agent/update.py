@@ -24,7 +24,7 @@ def update_actor(key: PRNGKey, actor: Model, critic: Model, temp: Model, batch: 
         actor_loss = (log_probs * temp().mean() - q_values).mean()
         return actor_loss, {
             'actor_loss': actor_loss,
-            'entropy': -log_probs.mean(),
+            'actor_entropy': -log_probs.mean(),
             'actor_pnorm': tree_norm(actor_params),
         }
     new_actor, info = actor.apply_gradient(actor_loss_fn)
@@ -59,6 +59,7 @@ def update_critic(key: PRNGKey, actor: Model, critic: Model, target_critic: Mode
         q_logits = critic.apply({"params": critic_params}, batch.observations, batch.actions, batch.task_ids)
         q_logprobs = jax.nn.log_softmax(q_logits, axis=-1)
         critic_loss = -(target_probs[None] * q_logprobs).sum(-1).mean(-1).sum(-1)
+        critic_entropy = - (jax.nn.softmax(q_logits) * q_logprobs).sum(axis=-1).mean()
         return critic_loss, {
             "critic_loss": critic_loss,
             "q_mean": q_value_target.mean(),
@@ -67,6 +68,7 @@ def update_critic(key: PRNGKey, actor: Model, critic: Model, target_critic: Mode
             "r": batch.rewards.mean(),
             "critic_pnorm": tree_norm(critic_params),
             'q_logits': q_logits,
+            'critic_entropy': critic_entropy,
         }
     new_critic, info = critic.apply_gradient(critic_loss_fn)
     info["critic_gnorm"] = info.pop("grad_norm")
@@ -138,6 +140,7 @@ def update_critic_famo(key: PRNGKey, actor: Model, critic: Model, target_critic:
             weights = jnp.mean(task_loss) / task_loss
             weighted_loss = jax.lax.stop_gradient(weights) * task_loss
             critic_loss = weighted_loss.sum()
+        critic_entropy = - (jax.nn.softmax(q_logits) * q_logprobs).sum(axis=-1).mean()
 
         return critic_loss, {
             "critic_loss": critic_loss,
@@ -147,6 +150,7 @@ def update_critic_famo(key: PRNGKey, actor: Model, critic: Model, target_critic:
             "r": rewards.mean(),
             "critic_pnorm": tree_norm(critic_params),
             'task_loss': task_loss,
+            'critic_entropy': critic_entropy,
         },
 
     # def vmap_loss_fn(critic_params: Params):

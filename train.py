@@ -100,7 +100,7 @@ def main(_):
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     if FLAGS.save_path == '':
-        FLAGS.save_path = FLAGS.env_names
+        FLAGS.save_path = f'{FLAGS.env_names}_{FLAGS.job_type}'
     save_path = f'{save_dir}/{FLAGS.save_path}/{FLAGS.seed}'
     os.makedirs(save_path, exist_ok=True)
 
