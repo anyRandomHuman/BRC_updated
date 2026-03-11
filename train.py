@@ -16,7 +16,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('seed', 0, 'Random seed.')
 flags.DEFINE_integer('eval_episodes', 5, 'Number of episodes used for evaluation.')
 flags.DEFINE_integer('eval_interval', 10000, 'Eval interval.')
-flags.DEFINE_integer('online_eval_interval', 10, 'online Eval interval.')
+flags.DEFINE_integer('online_eval_interval', 100, 'online Eval interval.')
 flags.DEFINE_integer('batch_size', 1024, 'Mini batch size.')
 flags.DEFINE_integer('max_steps', 1000000, 'Number of training steps.')
 flags.DEFINE_integer('replay_buffer_size', 1000000, 'Replay buffer size.')
@@ -36,6 +36,7 @@ flags.DEFINE_string('project', 'BRC', 'project')
 flags.DEFINE_float('w_lr', 0.1, 'v_max')
 flags.DEFINE_float('w_d', 0.001, 'v_max')
 flags.DEFINE_integer('loss_scaling', 1, 'loss scaling: famo=1, loss scaling=2')
+flags.DEFINE_integer('heatmap_max_history', 500, 'heatmap_max_history.')
 
 
 def main(_):
@@ -85,7 +86,7 @@ def main(_):
         reward_normalizer = RewardNormalizer(num_tasks, target_entropy=agent.target_entropy, discount=agent.discount)
     else:
         reward_normalizer = None
-    statistics_recorder = EpisodeRecorder(num_tasks, env_names)
+    statistics_recorder = EpisodeRecorder(num_tasks, env_names, FLAGS.heatmap_max_history)
 
     observations = env.reset()
 

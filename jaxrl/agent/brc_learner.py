@@ -31,7 +31,7 @@ def _get_infos(
     rng, actor_key, critic_key = jax.random.split(rng, 3)
     _, critic_info = update_critic(critic_key, actor, critic, target_critic, temp, batch, discount, num_bins, v_max, multitask)
     _, actor_info = update_actor(actor_key, actor, critic, temp, batch, num_bins, v_max, multitask) 
-    _, alpha_info = update_temperature(temp, actor_info['entropy'], target_entropy)
+    _, alpha_info = update_temperature(temp, actor_info['actor_entropy'], target_entropy)
     return {
         **critic_info,
         **actor_info,

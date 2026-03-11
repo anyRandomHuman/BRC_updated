@@ -18,7 +18,7 @@ def get_wandb_video(renders: np.ndarray, fps: int = 15):
     
 class EpisodeRecorder:
     
-    def __init__(self, num_seeds: int, env_names):
+    def __init__(self, num_seeds: int, env_names, max_history=500):
         self.returns_online = np.zeros(num_seeds)
         self.goals_online = np.zeros(num_seeds)
         self.counts = np.zeros(num_seeds)
@@ -26,7 +26,7 @@ class EpisodeRecorder:
         self.goals_online_episode = np.zeros(num_seeds)
         self.num_seeds = num_seeds
         self.env_names = env_names
-        self.histogram_logger = WandbCriticCallback(num_seeds, env_names, max_history=1000)
+        self.histogram_logger = WandbCriticCallback(num_seeds, env_names, max_history=max_history)
 
     def update(self, rewards: np.ndarray, goals: np.ndarray, terminals: np.ndarray, truncates: np.ndarray):
         self.returns_online_episode += rewards
