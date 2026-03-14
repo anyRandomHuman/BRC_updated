@@ -135,11 +135,11 @@ def update_critic_famo(key: PRNGKey, actor: Model, critic: Model, target_critic:
             weights = jax.nn.softmax(cw_state.params, -1)
             co = jax.lax.stop_gradient((weights / (task_loss + 1e-8)).sum())
             weighted_loss = (weights * jnp.log(task_loss + 1e-8) / co)
-            critic_loss = weighted_loss.sum()
+            critic_loss = weighted_loss.mean()
         elif famo == 2:
             weights = jnp.mean(task_loss) / task_loss
             weighted_loss = jax.lax.stop_gradient(weights) * task_loss
-            critic_loss = weighted_loss.sum()
+            critic_loss = weighted_loss.mean()
         critic_entropy = - (jax.nn.softmax(q_logits) * q_logprobs).sum(axis=-1).mean()
 
         return critic_loss, {
@@ -205,7 +205,7 @@ def update_actor_famo(key: PRNGKey, actor: Model, critic: Model, temp: Model, ba
             abs_task_loss = jnp.abs(task_loss)
             weights = jnp.mean(abs_task_loss) / (abs_task_loss + 1e-8)
             weighted_loss = jax.lax.stop_gradient(weights) * task_loss
-            actor_loss = weighted_loss.sum()
+            actor_loss = weighted_loss.mean()
         else:
             raise NotImplementedError
         return actor_loss, {
@@ -213,6 +213,7 @@ def update_actor_famo(key: PRNGKey, actor: Model, critic: Model, temp: Model, ba
             'actor_entropy': -log_probs.mean(),
             'actor_pnorm': tree_norm(actor_params),
             'actor_task_loss': task_loss,
+            'actor_task_weights': weights,
         }
 
     new_actor, info = actor.apply_gradient(actor_loss_fn)

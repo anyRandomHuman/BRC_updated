@@ -10,6 +10,7 @@ from jaxrl.envs import ParallelEnv
 from jaxrl.normalizer import RewardNormalizer
 from jaxrl.logger import EpisodeRecorder
 from jaxrl.env_names import get_environment_list
+import wandb
 
 FLAGS = flags.FLAGS
 
@@ -128,8 +129,10 @@ def main(_):
 
             if FLAGS.normalize and not FLAGS.loss_scaling:
                 batches = reward_normalizer.normalize(batches, agent.get_temperature())
-            _ = agent.update(batches, FLAGS.updates_per_step, i)
+            infos = agent.update(batches, FLAGS.updates_per_step, i)
             if (i % eval_interval == 0 or i % FLAGS.online_eval_interval == 0) and i >= FLAGS.start_training:
+                weights_dict = {f'{env_names[i]}/actor_task_weights': infos['actor_task_weights'][i] for i, env_name in enumerate(env_names)}
+                wandb.log(weights_dict, step=i)
                 info_dict = statistics_recorder.log(FLAGS, agent, replay_buffer, reward_normalizer, i, eval_env,
                                                     render=FLAGS.render)
         if i > (FLAGS.max_steps / 2) and not i % (FLAGS.max_steps / 3):
