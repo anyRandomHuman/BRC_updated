@@ -15,7 +15,7 @@ def build_actor_input(critic: Model, observations: jnp.ndarray, task_ids: jnp.nd
 def update_actor(key: PRNGKey, actor: Model, critic: Model, temp: Model, batch: Batch, num_bins: int, v_max: float, multitask: bool):
     inputs = build_actor_input(critic, batch.observations, batch.task_ids, multitask)
     def actor_loss_fn(actor_params: Params):
-        dist = actor.apply({'params': actor_params}, inputs)        
+        dist = actor.apply({'params': actor_params}, inputs)
         actions, log_probs = dist.sample_and_log_prob(seed=key)
         q_logits = critic(batch.observations, actions, batch.task_ids)        
         q_probs = jax.nn.softmax(q_logits, axis=-1).mean(axis=0)
@@ -196,13 +196,14 @@ def update_actor_famo(key: PRNGKey, actor: Model, critic: Model, temp: Model, ba
     def actor_loss_fn(actor_params: Params):
         dist = actor.apply({'params': actor_params}, inputs)
         actions, log_probs = dist.sample_and_log_prob(seed=key)
-        q_logits = critic(observations, actions, task_ids)
+        q_logits = critic(batch.observations, actions, batch.task_ids)
         q_probs = jax.nn.softmax(q_logits, axis=-1).mean(axis=0)
         bin_values = jnp.linspace(start=-v_max, stop=v_max, num=num_bins)[None]
         q_values = (bin_values * q_probs).sum(-1)
         task_loss = (log_probs * temp().mean() - q_values).reshape(old_shape).mean(axis=1)
         if loss_scale_type == 2:
-            weights = jnp.mean(task_loss) / task_loss
+            abs_task_loss = jnp.abs(task_loss)
+            weights = jnp.mean(abs_task_loss) / (abs_task_loss + 1e-8)
             weighted_loss = jax.lax.stop_gradient(weights) * task_loss
             actor_loss = weighted_loss.sum()
         else:
