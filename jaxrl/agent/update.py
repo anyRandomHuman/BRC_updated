@@ -182,20 +182,41 @@ def update_critic_famo(key: PRNGKey, actor: Model, critic: Model, target_critic:
 
     return new_critic, info, cw_state
 
-def update_actor_famo(*args, **kwargs):
-    batch = args[4]
+def update_actor_famo(key: PRNGKey, actor: Model, critic: Model, temp: Model, batch: Batch, num_bins: int, v_max: float, multitask: bool,
+                      loss_scale_type):
     new_shape = (batch.observations.shape[0] * batch.observations.shape[1], -1)
+    old_shape = batch.rewards.shape
+    observations=batch.observations.reshape(new_shape)
+    task_ids=batch.task_ids.reshape(batch.observations.shape[0] * batch.observations.shape[1])
 
-    new_batch = Batch(
-        observations=batch.observations.reshape(new_shape),
-        actions=batch.actions.reshape(new_shape),
-        rewards=batch.rewards.reshape(batch.observations.shape[0] * batch.observations.shape[1]),
-        masks=batch.masks.reshape(batch.observations.shape[0] * batch.observations.shape[1]),
-        next_observations=batch.next_observations.reshape(new_shape),
-        task_ids=batch.task_ids.reshape(batch.observations.shape[0] * batch.observations.shape[1]),
-    )
-    new_args = (args[0], args[1], args[2], args[3], new_batch, args[5], args[6], args[7])
-    return update_actor(*new_args, **kwargs)
+    # new_args = (args[0], args[1], args[2], args[3], new_batch, args[5], args[6], args[7])
+
+    inputs = build_actor_input(critic, observations, task_ids, multitask)
+
+    def actor_loss_fn(actor_params: Params):
+        dist = actor.apply({'params': actor_params}, inputs)
+        actions, log_probs = dist.sample_and_log_prob(seed=key)
+        q_logits = critic(observations, actions, task_ids)
+        q_probs = jax.nn.softmax(q_logits, axis=-1).mean(axis=0)
+        bin_values = jnp.linspace(start=-v_max, stop=v_max, num=num_bins)[None]
+        q_values = (bin_values * q_probs).sum(-1)
+        task_loss = (log_probs * temp().mean() - q_values).reshape(old_shape).mean(axis=1)
+        if loss_scale_type == 2:
+            mean_loss = jax.lax.stop_gradient(jnp.mean(task_loss))
+            actor_loss = mean_loss * task_loss / jax.lax.stop_gradient(task_loss)
+        else:
+            raise NotImplementedError
+        return actor_loss, {
+            'actor_loss': actor_loss,
+            'actor_entropy': -log_probs.mean(),
+            'actor_pnorm': tree_norm(actor_params),
+            'actor_task_loss': task_loss,
+        }
+
+    new_actor, info = actor.apply_gradient(actor_loss_fn)
+    info['actor_gnorm'] = info.pop('grad_norm')
+    return new_actor, info
+
 '''
 from jaxrl.utils import Batch
 

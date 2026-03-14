@@ -75,7 +75,7 @@ def _update(
     if famo:
         new_critic, critic_info, cw_state = update_critic_famo(critic_key, actor, critic, target_critic, temp, batch, discount,
                                                 num_bins, v_max, multitask, cw_state, famo)
-        new_actor, actor_info = update_actor_famo(actor_key, actor, new_critic, temp, batch, num_bins, v_max, multitask)
+        new_actor, actor_info = update_actor_famo(actor_key, actor, new_critic, temp, batch, num_bins, v_max, multitask, famo)
     else:
         new_critic, critic_info = update_critic(critic_key, actor, critic, target_critic, temp, batch, discount, num_bins, v_max, multitask)
         new_actor, actor_info = update_actor(actor_key, actor, new_critic, temp, batch, num_bins, v_max, multitask)
