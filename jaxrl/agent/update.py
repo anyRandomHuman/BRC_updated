@@ -203,7 +203,7 @@ def update_actor_famo(key: PRNGKey, actor: Model, critic: Model, temp: Model, ba
         task_loss = (log_probs * temp().mean() - q_values).reshape(old_shape).mean(axis=1)
         if loss_scale_type == 2:
             abs_task_loss = jnp.abs(task_loss)
-            weights = jnp.mean(abs_task_loss) / (abs_task_loss + 1e-8)
+            weights = jnp.mean(abs_task_loss) / (abs_task_loss + 1e-8).clip(0.5, 2)
             weighted_loss = jax.lax.stop_gradient(weights) * task_loss
             actor_loss = weighted_loss.mean()
         else:
