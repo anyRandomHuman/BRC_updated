@@ -202,8 +202,9 @@ def update_actor_famo(key: PRNGKey, actor: Model, critic: Model, temp: Model, ba
         q_values = (bin_values * q_probs).sum(-1)
         task_loss = (log_probs * temp().mean() - q_values).reshape(old_shape).mean(axis=1)
         if loss_scale_type == 2:
-            mean_loss = jax.lax.stop_gradient(jnp.mean(task_loss))
-            actor_loss = mean_loss * task_loss / jax.lax.stop_gradient(task_loss)
+            weights = jnp.mean(task_loss) / task_loss
+            weighted_loss = jax.lax.stop_gradient(weights) * task_loss
+            actor_loss = weighted_loss.sum()
         else:
             raise NotImplementedError
         return actor_loss, {
