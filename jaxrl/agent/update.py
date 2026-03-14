@@ -196,7 +196,7 @@ def update_actor_famo(key: PRNGKey, actor: Model, critic: Model, temp: Model, ba
     def actor_loss_fn(actor_params: Params):
         dist = actor.apply({'params': actor_params}, inputs)
         actions, log_probs = dist.sample_and_log_prob(seed=key)
-        q_logits = critic(batch.observations, actions, batch.task_ids)
+        q_logits = critic(observations, actions, task_ids)
         q_probs = jax.nn.softmax(q_logits, axis=-1).mean(axis=0)
         bin_values = jnp.linspace(start=-v_max, stop=v_max, num=num_bins)[None]
         q_values = (bin_values * q_probs).sum(-1)
