@@ -83,7 +83,7 @@ def main(_):
 
     replay_buffer = ParallelReplayBuffer(env.observation_space, env.action_space.shape[-1], FLAGS.replay_buffer_size,
                                          num_tasks=num_tasks)
-    if FLAGS.normalize and not FLAGS.loss_scaling:
+    if FLAGS.normalize:
         reward_normalizer = RewardNormalizer(num_tasks, target_entropy=agent.target_entropy, discount=agent.discount)
     else:
         reward_normalizer = None
