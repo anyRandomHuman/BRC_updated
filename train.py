@@ -104,6 +104,7 @@ def main(_):
     if FLAGS.save_path == '':
         FLAGS.save_path = f'{FLAGS.env_names}_{FLAGS.job_type}'
     save_path = f'{save_dir}/{FLAGS.save_path}/{FLAGS.seed}'
+    save_path = f'{save_dir}/{FLAGS.save_path}/{FLAGS.seed}'
     os.makedirs(save_path, exist_ok=True)
 
     if FLAGS.disable_jit:
