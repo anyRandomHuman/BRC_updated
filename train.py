@@ -114,7 +114,7 @@ def main(_):
         actions = env.action_space.sample() if i < FLAGS.start_training else agent.sample_actions(observations,
                                                                                                   temperature=1.0)
         next_observations, rewards, terms, truns, goals = env.step(actions)
-        if FLAGS.normalize and not FLAGS.loss_scaling:
+        if FLAGS.normalize:
             reward_normalizer.update(rewards, terms, truns)
         statistics_recorder.update(rewards, goals, terms, truns)
         masks = env.generate_masks(terms, truns)
@@ -127,7 +127,7 @@ def main(_):
             else:
                 batches = replay_buffer.sample(batch_size, FLAGS.updates_per_step)
 
-            if FLAGS.normalize and not FLAGS.loss_scaling:
+            if FLAGS.normalize:
                 batches = reward_normalizer.normalize(batches, agent.get_temperature())
             infos = agent.update(batches, FLAGS.updates_per_step, i)
             if (i % eval_interval == 0 or i % FLAGS.online_eval_interval == 0) and i >= FLAGS.start_training:
