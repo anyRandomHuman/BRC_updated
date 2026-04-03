@@ -213,6 +213,13 @@ HB_HANDS = [
     'h1hand-bookshelf_hard-v0', 
     ]
 
+HB_HANDS_EASY = [
+    'hb/h1hand-insert_normal-v0',
+    'hb/h1hand-room-v0',
+    'hb/h1hand-door-v0',
+    'hb/h1hand-push-v0',
+]
+
 SHADOWHAND_TRAIN = [
     'e_toy_airplane', 
     'knife', 
@@ -346,7 +353,8 @@ EnvironmentsDict = {
     'SHADOWHAND_TEST': SHADOWHAND_TEST,
     'TEST_SINGLE': TEST_SINGLE,
     'TEST_MULTI': TEST_MULTI,
-    'TEST_MULTI_VARYING': TEST_MULTI_VARYING
+    'TEST_MULTI_VARYING': TEST_MULTI_VARYING,
+    'HB_HANDS_EASY': HB_HANDS_EASY
     }
 
 def get_environment_list(env_names: str | list):
