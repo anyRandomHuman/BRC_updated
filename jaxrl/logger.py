@@ -4,9 +4,14 @@ from jaxrl.log_histogram import WandbCriticCallback
 
 def log_to_wandb(step: int, infos: dict, env_names, suffix: str = ''):
     dict_to_log = {'timestep': step}
-    for info_key in infos:
-        for seed, value in enumerate(infos[info_key]):
-            dict_to_log[f'{env_names[seed]}/{info_key}{suffix}'] = value
+    for key in infos:
+        if infos[key].ndim == 1 and infos[key].shape[0] == len(env_names):
+            dict_to_log |= {f'{env_names[i]}/{key}': infos[key][i] for i, env_name in enumerate(env_names)}
+        elif infos[key].ndim == 0:
+            dict_to_log |= {key: infos[key]}
+        else:
+            pass
+
     wandb.log(dict_to_log, step=step)
     
 def get_wandb_video(renders: np.ndarray, fps: int = 15):
@@ -49,7 +54,7 @@ class EpisodeRecorder:
         print(infos_online_eval)
         return infos_online_eval
     
-    def log(self, FLAGS, agent, replay_buffer, reward_normalizer, step, eval_env=None, render=False):
+    def log(self, FLAGS, agent, replay_buffer, reward_normalizer, step, eval_env=None, render=False, infos=None):
         batches_info = replay_buffer.sample_task_batches()
         if reward_normalizer:
             batches_info = reward_normalizer.normalize(batches_info, agent.get_temperature())
@@ -62,8 +67,8 @@ class EpisodeRecorder:
             denominator = (denominator - agent.get_temperature() * reward_normalizer.effective_horizon * reward_normalizer.target_entropy / 2) / reward_normalizer.v_max
             wandb.log({f'{self.env_names[i]}/denominator_{i}': denominator[i] for i in range(denominator.shape[0])}, step=step)
             wandb.log({f'{self.env_names[i]}/normed_reward_{i}': v for i, v in enumerate(batches_info.rewards.mean(axis=1))}, step=step)
-        infos = agent.get_infos(batches_info)
-        self.histogram_logger._on_step(infos.pop('q_logits').mean(axis=1).mean(axis=1), step)
+        infos = agent.get_infos(batches_info) if infos is None else infos
+        self.histogram_logger._on_step(infos.pop('q_logits'), step)
         infos |= {'max_reward': replay_buffer.sample_task_batches(batch_size=1024).rewards.max(axis=1)}
         infos_online_eval = self._get_scores()
         infos = {**infos, **infos_online_eval}

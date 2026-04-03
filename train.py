@@ -36,9 +36,9 @@ flags.DEFINE_string('job_type', 'default', 'job_type')
 flags.DEFINE_string('project', 'BRC', 'project')
 flags.DEFINE_float('w_lr', 0.1, 'v_max')
 flags.DEFINE_float('w_d', 0.001, 'v_max')
-flags.DEFINE_integer('loss_scaling', 1, 'loss scaling: famo=1, loss scaling=2')
 flags.DEFINE_integer('heatmap_max_history', 500, 'heatmap_max_history.')
-
+flags.DEFINE_string('loss_process', 'famo_total', 'famo, famo_total, mean, inverse_scale')
+flags.DEFINE_integer('warmup_epochs', 10000, 'warmup_epochs')
 
 def main(_):
     if FLAGS.log_to_wandb:
@@ -67,7 +67,8 @@ def main(_):
     kwargs['width_critic'] = FLAGS.width_critic
     kwargs['w_lr'] = FLAGS.w_lr
     kwargs['w_d'] = FLAGS.w_d
-    kwargs['famo'] = FLAGS.loss_scaling
+    kwargs['loss_process'] = FLAGS.loss_process
+    kwargs['warmup_epochs'] = FLAGS.warmup_epochs
 
     num_tasks = len(env.envs)
 
@@ -123,19 +124,21 @@ def main(_):
         observations = next_observations
         observations, terms, truns = env.reset_where_done(observations, terms, truns)
         if i >= FLAGS.start_training:
-            if FLAGS.loss_scaling:
-                batches = replay_buffer.sample_equal_task_batches(FLAGS.batch_size, FLAGS.updates_per_step)
-            else:
-                batches = replay_buffer.sample(batch_size, FLAGS.updates_per_step)
-
+            batches = replay_buffer.sample_equal_task_batches(FLAGS.batch_size, FLAGS.updates_per_step)
             if FLAGS.normalize:
                 batches = reward_normalizer.normalize(batches, agent.get_temperature())
             infos = agent.update(batches, FLAGS.updates_per_step, i)
             if (i % eval_interval == 0 or i % FLAGS.online_eval_interval == 0) and i >= FLAGS.start_training:
-                weights_dict = {f'{env_names[i]}/actor_task_weights': infos['actor_task_weights'][i] for i, env_name in enumerate(env_names)}
-                wandb.log(weights_dict, step=i)
+                # new_dict = {}
+                # for key in infos.keys():
+                #     if infos[key].ndim == 1 and infos[key].shape[0] == len(env_names):
+                #         new_dict |= {f'{env_names[i]}/{key}': infos[key][i] for i, env_name in enumerate(env_names)}
+                #     else:
+                #         new_dict |= {key: infos[key]}
+                # weights_dict = {f'{env_names[i]}/actor_task_weights': infos['actor_task_weights'][i] for i, env_name in enumerate(env_names)}
+                # wandb.log(new_dict, step=i)
                 info_dict = statistics_recorder.log(FLAGS, agent, replay_buffer, reward_normalizer, i, eval_env,
-                                                    render=FLAGS.render)
+                                                    render=FLAGS.render, infos=infos)
         if i > (FLAGS.max_steps / 2) and not i % (FLAGS.max_steps / 3):
             agent.save(save_path)
 

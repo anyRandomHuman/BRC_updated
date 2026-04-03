@@ -5,13 +5,25 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import optax
+from flax import struct
+from flax.core import FrozenDict
+from flax.training.train_state import TrainState
 
-from jaxrl.agent.update import build_actor_input, update_actor, update_critic, update_target_critic, update_temperature, \
-    update_critic_famo, update_actor_famo
+from jaxrl.agent.update import build_actor_input, update_actor, update_critic, update_target_critic, update_temperature
 
 from jaxrl.networks import NormalTanhPolicy, Critic, Temperature
 from jaxrl.utils import Model, PRNGKey, Batch
 
+@struct.dataclass
+class Models:
+    critic: Model
+    actor: Model
+    temp: Model
+    target_critic: Model
+    cw_state: TrainState
+    aw_state: TrainState
+    critic_loss: jnp.ndarray
+    actor_loss: jnp.ndarray
 
 @functools.partial(jax.jit, static_argnames=('discount', 'target_entropy', 'num_bins', 'v_max', 'multitask'),)
 @functools.partial(jax.vmap, in_axes=(None, None, None, None, None, 0, None, None, None, None, None))
@@ -57,98 +69,48 @@ def _sample_actions(
 
 def _update(
     rng: PRNGKey, 
-    actor: Model, 
-    critic: Model, 
-    target_critic: Model, 
-    temp: Model, 
+    models,
     batch: Batch, 
-    discount: float, 
-    tau: float, 
-    target_entropy: float, 
-    num_bins: int, 
-    v_max: float,
-    multitask: bool,
-    cw_state,
-    famo,
+    static_inputs,
 ):
     rng, actor_key, critic_key = jax.random.split(rng, 3)
-    if famo:
-        new_critic, critic_info, cw_state = update_critic_famo(critic_key, actor, critic, target_critic, temp, batch, discount,
-                                                num_bins, v_max, multitask, cw_state, famo)
-        new_actor, actor_info = update_actor_famo(actor_key, actor, new_critic, temp, batch, num_bins, v_max, multitask, famo)
-    else:
-        new_critic, critic_info = update_critic(critic_key, actor, critic, target_critic, temp, batch, discount, num_bins, v_max, multitask)
-        new_actor, actor_info = update_actor(actor_key, actor, new_critic, temp, batch, num_bins, v_max, multitask)
-    new_target_critic = update_target_critic(new_critic, target_critic, tau)
-    new_temp, alpha_info = update_temperature(temp, actor_info['actor_entropy'], target_entropy)
+    models, critic_info = update_critic(critic_key, models, batch, static_inputs)
+    models, actor_info = update_actor(actor_key, models, batch, static_inputs)
+    new_target_critic = update_target_critic(models.critic, models.target_critic, static_inputs['tau'])
+    new_temp, alpha_info = update_temperature(models.temp, actor_info['actor_entropy'], static_inputs['target_entropy'])
 
-    returns = (rng, new_actor, new_critic, new_target_critic, new_temp, {
+    models.replace(target_critic=new_target_critic, temp=new_temp)
+
+    returns = (rng, models, {
         **critic_info,
         **actor_info,
         **alpha_info,
     })
-    if famo:
-        returns += (cw_state,)
     return returns
 
-@functools.partial(jax.jit, static_argnames=('discount', 'tau', 'target_entropy', 'num_bins', 'v_max', 'multitask', 'num_updates', 'famo'))
+@functools.partial(jax.jit, static_argnames=('static_inputs'))
 def _do_multiple_updates(
     rng: PRNGKey,
-    actor: Model,
-    critic: Model,
-    target_critic: Model,
-    temp: Model,
+    models,
     batches: Batch,
-    discount: float,
-    tau: float,
-    target_entropy: float,
-    num_bins: int,
-    v_max: float,
-    multitask: bool, 
-    step: int,    
-    num_updates: int,
-    cw_state,
-    famo,
+    static_inputs,
+    step,
 ):
     def one_step(i, state):
-        if famo:
-            step, rng, actor, critic, target_critic, temp, info, cw_state = state
-        else:
-            step, rng, actor, critic, target_critic, temp, info = state
-            cw_state = None
+        step, rng, models, info = state
         step = step + 1
         returns = _update(
             rng,
-            actor,
-            critic,
-            target_critic,
-            temp,
+            models,
             jax.tree.map(lambda x: jnp.take(x, i, axis=0), batches),
-            discount,
-            tau,
-            target_entropy,
-            num_bins,
-            v_max,
-            multitask,
-            cw_state,
-            famo,
+            static_inputs
         )
-        if famo:
-            new_rng, new_actor, new_critic, new_target_critic, new_temp, info, cw_state = returns
-        else:
-            new_rng, new_actor, new_critic, new_target_critic, new_temp, info = returns
+
         return step, *returns
 
-    if famo:
-        inputs = (step, rng, actor, critic, target_critic, temp, {}, cw_state)
-    else:
-        inputs = (step, rng, actor, critic, target_critic, temp, {})
+    inputs = (step, rng, models, {})
     outs = one_step(0, inputs)
-    if famo:
-        step, rng, actor, critic, target_critic, temp, info, cw_state = outs
-    else:
-        step, rng, actor, critic, target_critic, temp, info = outs
-    return jax.lax.fori_loop(1, num_updates, one_step, outs)
+    return jax.lax.fori_loop(1, static_inputs['num_updates'], one_step, outs)
 
 class BRC(object):
     def __init__(
@@ -171,9 +133,10 @@ class BRC(object):
         width_actor: int = 256,
         num_bins: int = 101,
         v_max: float = 10.0,
-        w_lr =  0.1,
-        w_d = 0.01,
-        famo = 0,
+        w_lr =  0.025,
+        w_d = 0.99,
+        loss_process = 'mean',
+        warmup_epochs: int = 10000,
     ) -> None:
         
         action_dim = actions.shape[-1]
@@ -211,9 +174,28 @@ class BRC(object):
         self.step = 1
 
         from flax.training.train_state import TrainState
-        self.cw_state = TrainState.create(apply_fn=None, params=jnp.zeros(num_tasks),
+        cw_state = TrainState.create(apply_fn=None, params=jnp.zeros(num_tasks),
                                           tx=optax.adamw(w_lr, weight_decay=w_d))
-        self.famo = famo
+        aw_state = TrainState.create(apply_fn=None, params=jnp.zeros(num_tasks),
+                                          tx=optax.adamw(w_lr, weight_decay=w_d))
+        self.loss_process = loss_process
+        self.models = Models(
+            self.critic, self.actor, self.temp, self.target_critic, cw_state, aw_state,
+            critic_loss=jnp.zeros(self.num_tasks),
+        actor_loss=jnp.zeros(self.num_tasks),)
+        self.warmup_epochs = warmup_epochs
+        self.static_inputs = FrozenDict(
+            {'discount': self.discount,
+            'tau': self.tau,
+            'target_entropy': self.target_entropy,
+            'num_bins': self.num_bins,
+            'v_max': self.v_max,
+            'multitask': self.multitask,
+            'loss_process': self.loss_process,
+             'num_updates': updates_per_step,
+             'warmup_done': False if warmup_epochs > 0 else True,
+             }
+        )
 
     def sample_actions(self, observations: np.ndarray, temperature: float = 1.0):
         inputs = build_actor_input(self.critic, observations, self.task_ids, self.multitask)
@@ -224,51 +206,54 @@ class BRC(object):
     
     def update(self, batch: Batch, num_updates: int, env_step: int):
 
-        returns = _do_multiple_updates(
+        step, rng, self.models, info = _do_multiple_updates(
             self.rng,
-            self.actor,
-            self.critic,
-            self.target_critic,
-            self.temp,
+            self.models,
             batch,
-            self.discount,
-            self.tau,
-            self.target_entropy,
-            self.num_bins,
-            self.v_max,
-            self.multitask,
-            self.step,
-            num_updates,
-            self.cw_state,
-            self.famo
+            self.static_inputs,
+            env_step
         )
-        if self.famo:
-            step, rng, actor, critic, target_critic, temp, info, self.cw_state = returns
-        else:
-            step, rng, actor, critic, target_critic, temp, info = returns
 
         self.step = step
         self.rng = rng
-        self.actor = actor
-        self.critic = critic
-        self.target_critic = target_critic
-        self.temp = temp
+        self.actor = self.models.actor
+        self.critic = self.models.critic
+        self.target_critic = self.models.target_critic
+        self.temp = self.models.temp
+
+        if self.step > self.warmup_epochs:
+            new_static = dict(self.static_inputs)
+            new_static['warmup_done'] = True
+            self.static_inputs = FrozenDict(new_static)
+
+            self.models = self.models.replace(
+                actor_loss=info['actor_loss'],
+                critic_loss=info['critic_loss'],
+            )
         return info
     
     def get_infos(self, batch: Batch):
-        infos = _get_infos(            
-                    self.rng,
-                    self.actor,
-                    self.critic,
-                    self.target_critic,
-                    self.temp,
-                    batch,
-                    self.discount,
-                    self.target_entropy,
-                    self.num_bins,
-                    self.v_max,
-                    self.multitask)
-        return infos
+        # infos = _get_infos(
+        #             self.rng,
+        #             self.actor,
+        #             self.critic,
+        #             self.target_critic,
+        #             self.temp,
+        #             batch,
+        #             self.discount,
+        #             self.target_entropy,
+        #             self.num_bins,
+        #             self.v_max,
+        #             self.multitask)
+        # return infos
+        *_, info = _do_multiple_updates(
+            self.rng,
+            self.models,
+            batch,
+            self.static_inputs,
+            self.step,
+        )
+        return info
     
     def get_temperature(self):
         return _get_temperature(self.temp)
