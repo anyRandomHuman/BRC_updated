@@ -163,7 +163,7 @@ def update_critic(key: PRNGKey, models, batch: Batch, static_inputs):
     def vmap_loss_fn(critic_params: Params):
         fn = jax.vmap(critic_loss_fn, in_axes=(None, None, 0, None, None))
         task_loss, task_metrics = fn(critic_params, models, batch, key, static_inputs)
-        if static_inputs['warmup_done']:
+        if static_inputs['warmup_done'] and static_inputs['balance_critic']:
             if 'famo' in loss_process:
                 weights = jax.nn.softmax(models.cw_state.params, -1)
                 co = jax.lax.stop_gradient((weights / (task_loss + 1e-8)).sum())
@@ -188,7 +188,7 @@ def update_critic(key: PRNGKey, models, batch: Batch, static_inputs):
 
     models = models.replace(critic=new_critic)
 
-    if static_inputs['warmup_done']:
+    if static_inputs['warmup_done'] and static_inputs['balance_critic']:
         if 'famo' in loss_process:
             cw_state = models.cw_state
 
