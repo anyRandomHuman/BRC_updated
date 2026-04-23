@@ -1,5 +1,5 @@
 import functools
-from typing import Optional
+from typing import Callable, Optional
 
 import jax
 import jax.numpy as jnp
@@ -9,7 +9,15 @@ from flax import struct
 from flax.core import FrozenDict
 from flax.training.train_state import TrainState
 
-from jaxrl.agent.update import build_actor_input, update_actor, update_critic, update_target_critic, update_temperature
+from jaxrl.agent.update import (
+    build_actor_input,
+    default_weight_interpolation_fn,
+    resolve_grad_process_fn,
+    update_actor,
+    update_critic,
+    update_target_critic,
+    update_temperature,
+)
 
 from jaxrl.networks import NormalTanhPolicy, Critic, Temperature
 from jaxrl.utils import Model, PRNGKey, Batch
@@ -24,6 +32,8 @@ class Models:
     aw_state: TrainState
     critic_loss: jnp.ndarray
     actor_loss: jnp.ndarray
+    actor_grad_weights: jnp.ndarray
+    critic_grad_weights: jnp.ndarray
 
 @functools.partial(jax.jit, static_argnames=('discount', 'target_entropy', 'num_bins', 'v_max', 'multitask'),)
 @functools.partial(jax.vmap, in_axes=(None, None, None, None, None, 0, None, None, None, None, None))
@@ -137,6 +147,15 @@ class BRC(object):
         w_d = 0.99,
         loss_process = 'mean',
         warmup_epochs: int = 10000,
+        use_separate_actor_grad: bool = True,
+        use_separate_critic_grad: bool = True,
+        separate_grad_every: int = 1,
+        grad_process: str = 'mean',
+        grad_process_fn: Optional[Callable] = None,
+        grad_process_alpha= 1.0,
+        grad_lr = 0.1,
+        grad_momentum = 0.5,
+        niter = 20,
     ) -> None:
         
         action_dim = actions.shape[-1]
@@ -178,12 +197,19 @@ class BRC(object):
                                           tx=optax.adamw(w_lr, weight_decay=w_d))
         aw_state = TrainState.create(apply_fn=None, params=jnp.zeros(num_tasks),
                                           tx=optax.adamw(w_lr, weight_decay=w_d))
+        init_task_weights = jnp.ones((self.num_tasks,), dtype=jnp.float32) / jnp.maximum(self.num_tasks, 1)
         self.loss_process = loss_process
         self.models = Models(
             self.critic, self.actor, self.temp, self.target_critic, cw_state, aw_state,
             critic_loss=jnp.zeros(self.num_tasks),
-        actor_loss=jnp.zeros(self.num_tasks),)
+            actor_loss=jnp.zeros(self.num_tasks),
+            actor_grad_weights=init_task_weights,
+            critic_grad_weights=init_task_weights,
+        )
         self.warmup_epochs = warmup_epochs
+        separate_grad_every = max(1, int(separate_grad_every))
+        if grad_process_fn is None:
+            grad_process_fn = resolve_grad_process_fn(grad_process)
         self.static_inputs = FrozenDict(
             {'discount': self.discount,
             'tau': self.tau,
@@ -195,6 +221,18 @@ class BRC(object):
              'num_updates': updates_per_step,
              'warmup_done': False if warmup_epochs > 0 else True,
              'balance_critic': False,
+             'use_separate_actor_grad': use_separate_actor_grad,
+             'use_separate_critic_grad': use_separate_critic_grad,
+             'separate_grad_every': separate_grad_every,
+             'grad_process': grad_process,
+             'grad_process_fn': grad_process_fn,
+             'weight_interpolation_fn': default_weight_interpolation_fn,
+             'do_separate_actor_grad': False,
+             'do_separate_critic_grad': False,
+             'alpha': grad_process_alpha,
+             'lr': grad_lr,
+            'momentum': grad_momentum,
+                'niter': niter,
              }
         )
 
@@ -206,6 +244,18 @@ class BRC(object):
         return np.clip(actions, -1, 1)
     
     def update(self, batch: Batch, num_updates: int, env_step: int):
+        static_inputs = dict(self.static_inputs)
+        should_run_separate_grad = (
+            static_inputs['warmup_done']
+            and (env_step % static_inputs['separate_grad_every'] == 0)
+        )
+        static_inputs['do_separate_actor_grad'] = bool(
+            should_run_separate_grad and static_inputs['use_separate_actor_grad']
+        )
+        static_inputs['do_separate_critic_grad'] = bool(
+            should_run_separate_grad and static_inputs['use_separate_critic_grad']
+        )
+        self.static_inputs = FrozenDict(static_inputs)
 
         step, rng, self.models, info = _do_multiple_updates(
             self.rng,

@@ -3,6 +3,7 @@ import collections
 from typing import Any, Optional, Sequence
 
 import flax
+from jax.flatten_util import ravel_pytree
 import jax
 import jax.numpy as jnp
 import optax
@@ -16,6 +17,18 @@ Batch = collections.namedtuple(
 
 def tree_norm(tree):
     return jnp.sqrt(sum((x**2).sum() for x in jax.tree_util.tree_leaves(tree)))
+
+def flatten_grads(grads):
+    def flatten_single_task(grad_tree):
+        return ravel_pytree(grad_tree)[0]
+    return jax.vmap(flatten_single_task)(grads)
+
+def compute_normalized_gram(G):
+    norms = jnp.linalg.norm(G, axis=-1)
+    max_norm = jnp.max(norms)
+    normed_G = G / max_norm
+    GG = jnp.matmul(normed_G, normed_G.T)
+    return GG, max_norm
 
 @flax.struct.dataclass
 class SaveState:

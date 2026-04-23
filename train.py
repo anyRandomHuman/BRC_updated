@@ -39,6 +39,10 @@ flags.DEFINE_float('w_d', 0.001, 'v_max')
 flags.DEFINE_integer('heatmap_max_history', 500, 'heatmap_max_history.')
 flags.DEFINE_string('loss_process', 'famo_total', 'famo, famo_total, mean, inverse_scale')
 flags.DEFINE_integer('warmup_epochs', 10000, 'warmup_epochs')
+flags.DEFINE_boolean('use_separate_actor_grad', True, 'Use separate actor gradients.')
+flags.DEFINE_boolean('use_separate_critic_grad', True, 'Use separate critic gradients.')
+flags.DEFINE_integer('separate_grad_every', 1, 'Apply separate gradients every N env steps.')
+flags.DEFINE_string('grad_process', 'fairgrad', 'Gradient processing method for separate gradients.')
 
 def main(_):
     if FLAGS.log_to_wandb:
@@ -69,6 +73,10 @@ def main(_):
     kwargs['w_d'] = FLAGS.w_d
     kwargs['loss_process'] = FLAGS.loss_process
     kwargs['warmup_epochs'] = FLAGS.warmup_epochs
+    kwargs['use_separate_actor_grad'] = FLAGS.use_separate_actor_grad
+    kwargs['use_separate_critic_grad'] = FLAGS.use_separate_critic_grad
+    kwargs['separate_grad_every'] = FLAGS.separate_grad_every
+    kwargs['grad_process'] = FLAGS.grad_process
 
     num_tasks = len(env.envs)
 

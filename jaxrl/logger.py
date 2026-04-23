@@ -58,15 +58,16 @@ class EpisodeRecorder:
         batches_info = replay_buffer.sample_task_batches()
         if reward_normalizer:
             batches_info = reward_normalizer.normalize(batches_info, agent.get_temperature())
-            wandb.log({f'{self.env_names[i]}/reward_max_norm': reward_normalizer.returns_max_norm[i] for i in
-                       range(reward_normalizer.returns_max_norm.shape[0])}, step=step)
-            wandb.log({f'{self.env_names[i]}/reward_min_norm': reward_normalizer.returns_min_norm[i] for i in
-                       range(reward_normalizer.returns_min_norm.shape[0])}, step=step)
-            denominator = np.where(reward_normalizer.returns_max_norm > np.abs(reward_normalizer.returns_min_norm), reward_normalizer.returns_max_norm,
-                                   np.abs(reward_normalizer.returns_min_norm))
-            denominator = (denominator - agent.get_temperature() * reward_normalizer.effective_horizon * reward_normalizer.target_entropy / 2) / reward_normalizer.v_max
-            wandb.log({f'{self.env_names[i]}/denominator_{i}': denominator[i] for i in range(denominator.shape[0])}, step=step)
-            wandb.log({f'{self.env_names[i]}/normed_reward_{i}': v for i, v in enumerate(batches_info.rewards.mean(axis=1))}, step=step)
+            if wandb.run is not None:
+                wandb.log({f'{self.env_names[i]}/reward_max_norm': reward_normalizer.returns_max_norm[i] for i in
+                           range(reward_normalizer.returns_max_norm.shape[0])}, step=step)
+                wandb.log({f'{self.env_names[i]}/reward_min_norm': reward_normalizer.returns_min_norm[i] for i in
+                           range(reward_normalizer.returns_min_norm.shape[0])}, step=step)
+                denominator = np.where(reward_normalizer.returns_max_norm > np.abs(reward_normalizer.returns_min_norm), reward_normalizer.returns_max_norm,
+                                       np.abs(reward_normalizer.returns_min_norm))
+                denominator = (denominator - agent.get_temperature() * reward_normalizer.effective_horizon * reward_normalizer.target_entropy / 2) / reward_normalizer.v_max
+                wandb.log({f'{self.env_names[i]}/denominator_{i}': denominator[i] for i in range(denominator.shape[0])}, step=step)
+                wandb.log({f'{self.env_names[i]}/normed_reward_{i}': v for i, v in enumerate(batches_info.rewards.mean(axis=1))}, step=step)
         infos = agent.get_infos(batches_info) if infos is None else infos
         self.histogram_logger._on_step(infos.pop('q_logits'), step)
         infos |= {'max_reward': replay_buffer.sample_task_batches(batch_size=1024).rewards.max(axis=1)}
