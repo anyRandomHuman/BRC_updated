@@ -135,10 +135,14 @@ def fairgrad(task_grads, previous_weights, key, static_inputs):
     w_best = _optimize_task_weights(loss_fn, n_tasks, static_inputs)
     combined_grads, weights, raw_w, delta = _interpolate_and_aggregate(task_grads, previous_weights, w_best, static_inputs)
 
+    grad_norms = jnp.linalg.norm(G, axis=1)
     task_metrics = {
         'task_weights': weights,
         'raw_weights': raw_w,
+        'grad_norm': grad_norms,
+        'weighted_grad_norm': weights * grad_norms,
     }
+
     metrics = {
         'weight_delta': delta,
         **_spectral_metrics(GG, n_tasks),
