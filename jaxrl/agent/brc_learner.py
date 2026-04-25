@@ -89,7 +89,7 @@ def _update(
     new_target_critic = update_target_critic(models.critic, models.target_critic, static_inputs['tau'])
     new_temp, alpha_info = update_temperature(models.temp, actor_info['actor_entropy'], static_inputs['target_entropy'])
 
-    models.replace(target_critic=new_target_critic, temp=new_temp)
+    models = models.replace(target_critic=new_target_critic, temp=new_temp)
 
     returns = (rng, models, {
         **critic_info,
