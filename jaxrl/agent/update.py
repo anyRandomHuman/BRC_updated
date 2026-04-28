@@ -308,6 +308,8 @@ def critic_loss_fn(critic_params: Params, models, batch, key, static_inputs):
         "r": batch.rewards.mean(),
         'critic_entropy': critic_entropy,
         'q_logits': q_logits.mean(axis=(0,1)),
+        'max_logit_before_softmax': jnp.max(q_logits),
+        'mean_logits_before_softmax': jnp.mean(q_logits),
     },
 
 def update_critic(key: PRNGKey, models, batch: Batch, static_inputs):
