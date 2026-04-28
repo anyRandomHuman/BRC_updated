@@ -350,8 +350,8 @@ SHADOWHAND_TEST = [
     ]
 
 HB_MIX_2 = [
-    'hb/h1hand-stand-v0',
-    'hb/h1hand-insert_normal-v0',
+    'h1hand-stand-v0',
+    'h1hand-insert_normal-v0',
 ]
 
 EnvironmentsDict = {
