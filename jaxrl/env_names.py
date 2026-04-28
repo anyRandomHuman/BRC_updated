@@ -349,6 +349,11 @@ SHADOWHAND_TEST = [
     'plum'
     ]
 
+HB_MIX_2 = [
+    'hb/h1hand-stand-v0',
+    'hb/h1hand-insert_normal-v0',
+]
+
 EnvironmentsDict = {
     'DMC_DOGS': DMC_DOGS,
     'DMC_HUMANOIDS': DMC_HUMANOIDS,
@@ -366,6 +371,7 @@ EnvironmentsDict = {
     'HB_HANDS_EASY': HB_HANDS_EASY,
     'HB_BOOKSHELF': HB_BOOKSHELF,
     'HB_INSERT': HB_INSERT,
+    'HB_MIX_2': HB_MIX_2,
     }
 
 def get_environment_list(env_names: str | list):
