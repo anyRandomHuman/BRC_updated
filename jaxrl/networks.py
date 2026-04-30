@@ -25,6 +25,17 @@ class BroNet(nn.Module):
     add_final_layer: bool = False
     output_nodes: int = 101
     activations: Callable[[jnp.ndarray], jnp.ndarray] = nn.relu
+    last_init_str: str = 'orthogonal'
+
+    def setup(self):
+        try:
+            if self.last_init_str == 'orthogonal':
+                self.last_init = default_init()
+            else:
+                self.last_init = getattr(nn.initializers, self.last_init_str)
+        except:
+            self.last_init = default_init()
+
 
     @nn.compact
     def __call__(self, x: jnp.ndarray):
@@ -34,7 +45,7 @@ class BroNet(nn.Module):
         for i in range(self.depth):
             x = BronetBlock(self.hidden_dims, self.activations)(x)
         if self.add_final_layer:
-            x = nn.Dense(self.output_nodes, kernel_init=default_init())(x)
+            x = nn.Dense(self.output_nodes, kernel_init=self.last_init())(x)
         return x
 
 class TaskEmbedding(nn.Module): 
@@ -55,9 +66,12 @@ class QValue(nn.Module):
     depth: int = 2
     activations: Callable[[jnp.ndarray], jnp.ndarray] = nn.relu
     output_nodes: int = 101
-    
+    last_init_str: str = 'orthogonal'
+
     def setup(self):
-        self.critic = BroNet(hidden_dims=self.hidden_dims, depth=self.depth, activations=self.activations, add_final_layer=True, output_nodes=self.output_nodes)
+        self.critic = BroNet(
+            hidden_dims=self.hidden_dims, depth=self.depth, activations=self.activations,
+            add_final_layer=True, output_nodes=self.output_nodes, last_init_str=self.last_init_str)
 
     def __call__(self, inputs: jnp.ndarray):
         q_value = self.critic(inputs)
@@ -69,7 +83,8 @@ class QValueEnsemble(nn.Module):
     depth: int = 2
     activations: Callable[[jnp.ndarray], jnp.ndarray] = nn.relu
     output_nodes: int = 101
-    
+    last_init_str: str = 'orthogonal'
+
     def setup(self):
         VmapCritic = nn.vmap(QValue,
                              variable_axes={'params': 0},
@@ -77,7 +92,9 @@ class QValueEnsemble(nn.Module):
                              in_axes=None,
                              out_axes=0,
                              axis_size=self.ensemble_size)
-        self.q_value_ensemble = VmapCritic(hidden_dims=self.hidden_dims, depth=self.depth, activations=self.activations, output_nodes=self.output_nodes)
+        self.q_value_ensemble = VmapCritic(
+            hidden_dims=self.hidden_dims, depth=self.depth, activations=self.activations,
+            output_nodes=self.output_nodes, last_init_str=self.last_init_str)
 
     def __call__(self, inputs: jnp.ndarray):
         q_values = self.q_value_ensemble(inputs)
@@ -92,7 +109,8 @@ class Critic(nn.Module):
     activations: Callable[[jnp.ndarray], jnp.ndarray] = nn.relu
     output_nodes: int = 101
     multitask: bool = False
-    
+    last_init_str: str = 'orthogonal'
+
     def setup(self):
         if self.multitask:
             self.task_embedding = TaskEmbedding(self.num_tasks, self.embedding_size)
@@ -102,6 +120,7 @@ class Critic(nn.Module):
             depth=self.depth,
             activations=self.activations,
             output_nodes=self.output_nodes,
+            last_init_str=self.last_init_str
         )
 
     def __call__(self, observations: jnp.ndarray, actions: jnp.ndarray, task_ids: jnp.ndarray, return_embeddings: bool = False):

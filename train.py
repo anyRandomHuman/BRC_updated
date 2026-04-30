@@ -43,6 +43,7 @@ flags.DEFINE_boolean('use_separate_actor_grad', True, 'Use separate actor gradie
 flags.DEFINE_boolean('use_separate_critic_grad', True, 'Use separate critic gradients.')
 flags.DEFINE_integer('separate_grad_every', 1, 'Apply separate gradients every N env steps.')
 flags.DEFINE_string('grad_process', 'fairgrad', 'Gradient processing method for separate gradients.')
+flags.DEFINE_string('last_init_str', 'orthogonal', 'Environment name.')
 
 def main(_):
     if FLAGS.log_to_wandb:
@@ -77,6 +78,7 @@ def main(_):
     kwargs['use_separate_critic_grad'] = FLAGS.use_separate_critic_grad
     kwargs['separate_grad_every'] = FLAGS.separate_grad_every
     kwargs['grad_process'] = FLAGS.grad_process
+    kwargs['last_init_str'] = FLAGS.last_init_str
 
     num_tasks = len(env.envs)
 
