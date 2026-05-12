@@ -29,6 +29,7 @@ flags.DEFINE_boolean('render', False, 'Whether to log the rendering to wandb.')
 flags.DEFINE_integer('updates_per_step', 2, 'Number of updates per step.')
 flags.DEFINE_integer('width_critic', 4096, 'Width of the critic network.')
 flags.DEFINE_integer('width_actor', 256, 'Width of the actor network.')
+flags.DEFINE_integer('depth_actor', 2, 'Width of the actor network.')
 flags.DEFINE_string('save_path', '', 'Environment name.')
 flags.DEFINE_boolean('disable_jit', False, 'disable_jit')
 flags.DEFINE_float('v_max', 10.0, 'v_max')
@@ -81,6 +82,7 @@ def main(_):
     kwargs['grad_process'] = FLAGS.grad_process
     kwargs['last_init_str'] = FLAGS.last_init_str
     kwargs['width_actor'] = FLAGS.width_actor
+    kwargs['depth_actor'] = FLAGS.depth_actor
 
 
     num_tasks = len(env.envs)

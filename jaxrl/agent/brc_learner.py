@@ -156,7 +156,8 @@ class BRC(object):
         grad_lr = 0.1,
         grad_momentum = 0.5,
         niter = 20,
-        last_init_str: str = 'orthogonal'
+        last_init_str: str = 'orthogonal',
+        depth_actor=2
     ) -> None:
         
         action_dim = actions.shape[-1]
@@ -181,7 +182,7 @@ class BRC(object):
         def _init_models(seed):
             rng = jax.random.PRNGKey(seed)
             rng, actor_key, critic_key, temp_key = jax.random.split(rng, 4)
-            actor_def = NormalTanhPolicy(action_dim=action_dim, hidden_dims=width_actor)
+            actor_def = NormalTanhPolicy(action_dim=action_dim, hidden_dims=width_actor, depth=depth_actor)
             critic_def = Critic(
                 num_tasks=num_tasks, embedding_size=embedding_size, ensemble_size=ensemble_size,
                 hidden_dims=width_critic, depth=2, output_nodes=num_bins, multitask=self.multitask,
