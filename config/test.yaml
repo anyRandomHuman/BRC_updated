@@ -1,5 +1,6 @@
 defaults:
   - default
+  - _self_
 
 eval_episodes: 1
 eval_interval: 10000
