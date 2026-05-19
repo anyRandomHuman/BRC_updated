@@ -30,7 +30,7 @@ class BroNet(nn.Module):
     def setup(self):
         try:
             if self.last_init_str == 'orthogonal':
-                self.last_init = default_init()
+                self.last_init = default_init
             else:
                 self.last_init = getattr(nn.initializers, self.last_init_str)
         except:

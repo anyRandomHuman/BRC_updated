@@ -157,7 +157,8 @@ class BRC(object):
         grad_momentum = 0.5,
         niter = 20,
         last_init_str: str = 'orthogonal',
-        depth_actor=2
+        depth_actor=2,
+        cfg=None,
     ) -> None:
         
         action_dim = actions.shape[-1]
