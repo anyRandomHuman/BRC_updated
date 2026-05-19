@@ -1,0 +1,8 @@
+defaults:
+  - default
+
+eval_episodes: 1
+eval_interval: 10000
+online_eval_interval: 10
+job_type: test
+project: BRC_test
