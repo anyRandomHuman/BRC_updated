@@ -227,7 +227,7 @@ class BRC(object):
             'loss_process': self.loss_process,
              'num_updates': updates_per_step,
              'warmup_done': False if warmup_epochs > 0 else True,
-             'balance_critic': False,
+             'balance_critic': cfg.balance_critic,
              'use_separate_actor_grad': use_separate_actor_grad,
              'use_separate_critic_grad': use_separate_critic_grad,
              'separate_grad_every': separate_grad_every,

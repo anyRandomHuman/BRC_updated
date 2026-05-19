@@ -30,3 +30,4 @@ use_separate_critic_grad: false
 separate_grad_every: 1
 grad_process: fairgrad
 last_init_str: orthogonal
+balance_critic: false

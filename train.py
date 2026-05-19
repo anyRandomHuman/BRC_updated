@@ -58,6 +58,7 @@ def main(cfg):
         env.action_space.sample()[:1],
         num_tasks=num_tasks,
         v_max=cfg.v_max,
+        cfg=cfg,
         **kwargs,
     )
     batch_size = 1024 if agent.multitask else 256
