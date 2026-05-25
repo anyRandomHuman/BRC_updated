@@ -242,6 +242,7 @@ class BRC(object):
                 'niter': niter,
              }
         )
+        self.cfg = cfg
 
     def sample_actions(self, observations: np.ndarray, temperature: float = 1.0):
         inputs = build_actor_input(self.critic, observations, self.task_ids, self.multitask)
@@ -279,7 +280,7 @@ class BRC(object):
         self.target_critic = self.models.target_critic
         self.temp = self.models.temp
 
-        if self.step > self.warmup_epochs:
+        if self.step - self.cfg.start_training > self.warmup_epochs and not self.static_inputs['warmup_done']:
             new_static = dict(self.static_inputs)
             new_static['warmup_done'] = True
             self.static_inputs = FrozenDict(new_static)

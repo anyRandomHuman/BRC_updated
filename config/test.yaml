@@ -3,7 +3,24 @@ defaults:
   - _self_
 
 eval_episodes: 1
-eval_interval: 10000
+eval_interval: 1
 online_eval_interval: 10
 job_type: test
+
+batch_size: 30
+max_steps: 100
+replay_buffer_size: 30
+start_training: 30
+log_to_wandb: False
+render: False
+width_critic: 3
+env_names: HB_BASIC
+disable_jit: False
 project: BRC_test
+loss_process: famo_total
+warmup_epochs: 1
+last_init_str: orthogonal
+width_actor: 3
+depth_actor: 1
+
+balance_critic: False
