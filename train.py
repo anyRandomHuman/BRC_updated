@@ -48,7 +48,7 @@ def main(cfg):
     kwargs['last_init_str'] = cfg.last_init_str
     kwargs['width_actor'] = cfg.width_actor
     kwargs['depth_actor'] = cfg.depth_actor
-
+    log_bin_interval = getattr(cfg, 'log_bin_interval', 100)
 
     num_tasks = len(env.envs)
 
@@ -109,6 +109,8 @@ def main(cfg):
             if cfg.normalize:
                 batches = reward_normalizer.normalize(batches, agent.get_temperature())
             infos = agent.update(batches, cfg.updates_per_step, i)
+            if i % log_bin_interval == 0:
+                statistics_recorder.histogram_logger._on_step(infos.pop('q_logits'), i)
             if (i % eval_interval == 0 or i % cfg.online_eval_interval == 0) and i >= cfg.start_training:
                 # new_dict = {}
                 # for key in infos.keys():

@@ -69,7 +69,6 @@ class EpisodeRecorder:
                 wandb.log({f'{self.env_names[i]}/denominator_{i}': denominator[i] for i in range(denominator.shape[0])}, step=step)
                 wandb.log({f'{self.env_names[i]}/normed_reward_{i}': v for i, v in enumerate(batches_info.rewards.mean(axis=1))}, step=step)
         infos = agent.get_infos(batches_info) if infos is None else infos
-        self.histogram_logger._on_step(infos.pop('q_logits'), step)
         infos |= {'max_reward': replay_buffer.sample_task_batches(batch_size=1024).rewards.max(axis=1)}
         infos_online_eval = self._get_scores()
         infos = {**infos, **infos_online_eval}
