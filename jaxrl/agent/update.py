@@ -313,7 +313,7 @@ def critic_loss_fn(critic_params: Params, models, batch, key, static_inputs):
     },
 
 def update_critic(key: PRNGKey, models, batch: Batch, static_inputs):
-    if static_inputs.get('do_separate_critic_grad', False):
+    if static_inputs.get('use_separate_critic_grad', False):
         grad_key, process_key = jax.random.split(key, 2)
         grad_fn = jax.value_and_grad(critic_loss_fn, has_aux=True)
         vmap_grad_fn = jax.vmap(grad_fn, in_axes=(None, None, 0, None, None))
@@ -422,7 +422,7 @@ def actor_loss_fn(actor_params: Params, models, batch: Batch, key: PRNGKey, stat
 
 
 def update_actor(key: PRNGKey, models, batch: Batch, static_inputs):
-    if static_inputs.get('do_separate_actor_grad', False):
+    if static_inputs.get('use_separate_actor_grad', False):
         grad_key, process_key = jax.random.split(key, 2)
         grad_fn = jax.value_and_grad(actor_loss_fn, has_aux=True)
         vmap_grad_fn = jax.vmap(grad_fn, in_axes=(None, None, 0, None, None))

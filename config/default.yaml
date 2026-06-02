@@ -9,7 +9,7 @@ batch_size: 1024
 max_steps: 1000000
 replay_buffer_size: 1000000
 start_training: 5000
-env_names: cheetah-run
+env_names: HB_BASIC
 log_to_wandb: true
 offline_evaluation: true
 render: false

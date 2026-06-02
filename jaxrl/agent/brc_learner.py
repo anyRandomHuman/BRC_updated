@@ -234,8 +234,6 @@ class BRC(object):
              'grad_process': grad_process,
              'grad_process_fn': grad_process_fn,
              'weight_interpolation_fn': default_weight_interpolation_fn,
-             'do_separate_actor_grad': False,
-             'do_separate_critic_grad': False,
              'alpha': grad_process_alpha,
              'lr': grad_lr,
             'momentum': grad_momentum,

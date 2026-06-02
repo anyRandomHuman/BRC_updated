@@ -1,0 +1,8 @@
+defaults:
+  - default
+  - _self_
+
+job_type: fairgrad
+grad_process: fairgrad
+use_separate_actor_grad: True
+use_separate_critic_grad: false

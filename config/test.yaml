@@ -1,5 +1,5 @@
 defaults:
-  - default
+  - fairgrad
   - _self_
 
 eval_episodes: 1
