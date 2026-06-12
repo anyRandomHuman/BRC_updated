@@ -1,9 +1,11 @@
 #!/bin/bash
+set -euo pipefail
+
 #SBATCH --time=30:00:00  # Uncomment this line
 #SBATCH --partition=gpu_a100_il
 #SBATCH --gres=gpu:1
 #SBATCH --array=1-5
-#SBATCH --output=logs/array_%A_%a.out  # %A is JobID, %a is ArrayID
+#SBATCH --output=slurm-%A_%a.out
 
 module load devel/cuda/12.8
 eval "$(conda shell.bash hook)"
@@ -26,6 +28,6 @@ for arg in "$@"; do
     esac
 done
 
-python train.py "${args[@]}" "seed=${SLURM_ARRAY_TASK_ID}"
+python train.py hydra/launcher=basic "${args[@]}" "seed=${SLURM_ARRAY_TASK_ID}"
 
 conda deactivate

@@ -25,6 +25,7 @@ def main(cfg):
         )
 
     env_names = get_environment_list(cfg.env_names)
+    print(f"Resolved env_names from {cfg.env_names!r} to {env_names!r}", flush=True)
     env = ParallelEnv(env_names, seed=cfg.seed)
     if cfg.offline_evaluation:
         eval_env = ParallelEnv(env_names, seed=cfg.seed + 42)

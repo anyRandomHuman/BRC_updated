@@ -16,6 +16,8 @@ For the Slurm wrappers, use Hydra overrides as positional arguments:
 
 `sbatch queue.sh env_names=HB_EASY`
 
+The wrapper forces `hydra/launcher=basic` so the training runs inside the allocated Slurm job instead of trying to submit a nested Submitit job.
+
 ## Citation
 
 If you find this repository useful, feel free to cite our paper using the following bibtex.
