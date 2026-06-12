@@ -17,7 +17,7 @@ def main(cfg):
     if cfg.log_to_wandb:
         wandb.init(
             config=dict(cfg),
-            entity='crusaderx',
+            entity=cfg.wandb.entity,
             project=cfg.project,
             group=f'{cfg.env_names}',
             name=f'{cfg.env_names}_{cfg.seed}',

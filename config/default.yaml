@@ -35,3 +35,6 @@ grad_process: fairgrad
 last_init_str: orthogonal
 balance_critic: false
 log_bin_interval: 100
+
+wandb:
+  entity: crusaderx
