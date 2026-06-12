@@ -10,5 +10,20 @@ eval "$(conda shell.bash hook)"
 conda activate py10
 export MUJOCO_GL=egl
 
-python train.py "$@" --seed $SLURM_ARRAY_TASK_ID
+args=()
+for arg in "$@"; do
+    case "$arg" in
+        --cfg=*|--package=*|--info=*)
+            args+=("$arg")
+            ;;
+        --*=*)
+            args+=("${arg#--}")
+            ;;
+        *)
+            args+=("$arg")
+            ;;
+    esac
+done
+
+python train.py "${args[@]}" "seed=${SLURM_ARRAY_TASK_ID}"
 conda deactivate

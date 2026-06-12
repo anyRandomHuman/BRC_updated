@@ -7,10 +7,25 @@
 
 module load devel/cuda/12.8
 eval "$(conda shell.bash hook)"
-conda activate py10
+conda activate dime
 export MUJOCO_GL=egl
 
-# Pass all arguments to train.py
-python train.py "$@" --seed $SLURM_ARRAY_TASK_ID
+# Translate legacy --key=value arguments into Hydra overrides.
+args=()
+for arg in "$@"; do
+    case "$arg" in
+        --cfg=*|--package=*|--info=*)
+            args+=("$arg")
+            ;;
+        --*=*)
+            args+=("${arg#--}")
+            ;;
+        *)
+            args+=("$arg")
+            ;;
+    esac
+done
+
+python train.py "${args[@]}" "seed=${SLURM_ARRAY_TASK_ID}"
 
 conda deactivate

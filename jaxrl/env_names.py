@@ -1,3 +1,4 @@
+from ast import literal_eval
 
 
 TEST_SINGLE = [
@@ -374,12 +375,24 @@ EnvironmentsDict = {
     'HB_MIX_2': HB_MIX_2,
     }
 
+try:
+    from omegaconf import ListConfig
+except ImportError:
+    ListConfig = tuple()
+
+
 def get_environment_list(env_names: str | list):
     if isinstance(env_names, str):
-        if env_names in EnvironmentsDict.keys():
+        env_names = env_names.strip()
+        if env_names in EnvironmentsDict:
             return EnvironmentsDict[env_names]
-        else:
-            return [env_names]
-    elif isinstance(env_names, list):
-        return env_names
-    
+        if env_names.startswith("[") and env_names.endswith("]"):
+            parsed = literal_eval(env_names)
+            if isinstance(parsed, list):
+                return [str(name).strip() for name in parsed]
+        if "," in env_names:
+            return [name.strip() for name in env_names.split(",") if name.strip()]
+        return [env_names]
+    elif isinstance(env_names, (list, tuple, ListConfig)):
+        return list(env_names)
+    raise TypeError(f"Unsupported env_names type: {type(env_names)!r}")

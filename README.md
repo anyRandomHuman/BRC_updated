@@ -8,9 +8,13 @@ This branch contains the implementation of the BRC algorithm.
 
 To run the BRC algorithm in a single task mode, just pass a single task name to the `env_names` variable:
 
-`python3 train.py --env_names=dog-run`
+`python3 train.py env_names=dog-run`
 
 By passing a list of task names, multi-task mode will be enabled. 
+
+For the Slurm wrappers, use Hydra overrides as positional arguments:
+
+`sbatch queue.sh env_names=HB_EASY`
 
 ## Citation
 
