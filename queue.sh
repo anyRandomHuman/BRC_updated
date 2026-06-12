@@ -9,7 +9,14 @@ set -euo pipefail
 
 module load devel/cuda/12.8
 eval "$(conda shell.bash hook)"
-conda activate dime
+if conda activate hbdime; then
+    echo "Activated conda env: hbdime"
+elif conda activate dime; then
+    echo "Activated conda env: dime"
+else
+    echo "Failed to activate conda env hbdime or dime" >&2
+    exit 1
+fi
 export MUJOCO_GL=egl
 
 # Translate legacy --key=value arguments into Hydra overrides.
