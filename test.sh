@@ -1,11 +1,11 @@
 #!/bin/bash
-set -euo pipefail
-
 #SBATCH --time=00:30:00
 #SBATCH --partition=gpu_a100_short
 #SBATCH --gres=gpu:1
 #SBATCH --array=1-5
 #SBATCH --output=slurm-%A_%a.out
+
+set -euo pipefail
 
 module load devel/cuda/12.8
 eval "$(conda shell.bash hook)"

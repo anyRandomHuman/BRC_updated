@@ -350,29 +350,167 @@ SHADOWHAND_TEST = [
     'plum'
     ]
 
-HB_MIX_2 = [
-    'h1hand-stand-v0',
-    'h1hand-insert_normal-v0',
+HB_MANI_2=[
+    'hb/h1hand-insert_normal-v0',
+    'hb/h1hand-bookshelf_simple-v0',
 ]
 
+HB_MANI_2_bookshelf=[
+    'hb/h1hand-bookshelf_simple-v0',
+    'hb/h1hand-bookshelf_hard-v0',
+]
+
+HB_MANI_2_door_window=[
+    'hb/h1hand-door-v0',
+    'hb/h1hand-window-v0',
+]
+
+HB_MANI_4=[
+    'hb/h1hand-insert_small-v0',
+    'hb/h1hand-insert_normal-v0',
+    'hb/h1hand-bookshelf_simple-v0',
+    'hb/h1hand-bookshelf_hard-v0',
+]
+
+HB_MANI_6=[
+    'hb/h1hand-insert_small-v0',
+    'hb/h1hand-insert_normal-v0',
+    'hb/h1hand-bookshelf_simple-v0',
+    'hb/h1hand-bookshelf_hard-v0',
+    'hb/h1hand-spoon-v0',
+    'hb/h1hand-push-v0',
+]
+
+HB_MANI_8=[
+    'hb/h1hand-insert_small-v0',
+    'hb/h1hand-insert_normal-v0',
+    'hb/h1hand-bookshelf_simple-v0',
+    'hb/h1hand-bookshelf_hard-v0',
+    'hb/h1hand-spoon-v0',
+    'hb/h1hand-push-v0',
+    'hb/h1hand-door-v0',
+    'hb/h1hand-window-v0',
+]
+
+HB_MANI_6_different=[
+    'hb/h1hand-insert_normal-v0',
+    'hb/h1hand-bookshelf_simple-v0',
+    'hb/h1hand-spoon-v0',
+    'hb/h1hand-push-v0',
+    'hb/h1hand-door-v0',
+    'hb/h1hand-window-v0',
+]
+
+HB_MANI_4_no_insert_shelf=[
+    'hb/h1hand-spoon-v0',
+    'hb/h1hand-push-v0',
+    'hb/h1hand-door-v0',
+    'hb/h1hand-window-v0',
+]
+
+HB_MANI_4_single_insert_shelf=[
+    'hb/h1hand-spoon-v0',
+    'hb/h1hand-door-v0',
+    'hb/h1hand-insert_normal-v0',
+    'hb/h1hand-bookshelf_simple-v0',
+]
+
+HB_MIX_2 = [
+    'hb/h1hand-stand-v0',
+    'hb/h1hand-insert_normal-v0',
+]
+
+HB_MIX_4 = [
+    'hb/h1hand-stand-v0',
+    'hb/h1hand-walk-v0',
+    'hb/h1hand-insert_normal-v0',
+    'hb/h1hand-bookshelf_simple-v0',
+]
+
+HB_MIX_6 = [
+    'hb/h1hand-stand-v0',
+    'hb/h1hand-walk-v0',
+    'hb/h1hand-run-v0',
+    'hb/h1hand-insert_normal-v0',
+    'hb/h1hand-bookshelf_simple-v0',
+    'hb/h1hand-push-v0',
+]
+
+HB_MIX_8 = [
+    'hb/h1hand-stand-v0',
+    'hb/h1hand-walk-v0',
+    'hb/h1hand-run-v0',
+    'hb/h1hand-insert_normal-v0',
+    'hb/h1hand-bookshelf_simple-v0',
+    'hb/h1hand-push-v0',
+    'hb/h1hand-room-v0',
+    'hb/h1hand-truck-v0',
+]
+
+HB_LOCO_2 = [
+    'hb/h1hand-stand-v0',
+    'hb/h1hand-walk-v0',
+]
+
+HB_LOCO_4 = [
+    'hb/h1hand-stand-v0',
+    'hb/h1hand-walk-v0',
+    'hb/h1hand-run-v0',
+    'hb/h1hand-crawl-v0',
+]
+
+HB_LOCO_6 = [
+    'hb/h1hand-stand-v0',
+    'hb/h1hand-walk-v0',
+    'hb/h1hand-run-v0',
+    'hb/h1hand-crawl-v0',
+    'hb/h1hand-slide-v0',
+    'hb/h1hand-pole-v0',
+]
+
+HB_INSERT_SMALL = [
+    'hb/h1hand-insert_small-v0', ]
+
+HB_INSERT_NORMAL = [
+    'hb/h1hand-insert_normal-v0', ]
+
+HB_TEST = {
+    'hb/h1-walk-v0',
+    'hb/h1-stand-v0',
+}
+
+WALKER3 = {
+    'dm_control/walker-stand', 'dm_control/walker-walk', 'dm_control/walker-run'
+}
+
 EnvironmentsDict = {
-    'DMC_DOGS': DMC_DOGS,
-    'DMC_HUMANOIDS': DMC_HUMANOIDS,
-    'METAWORLD_ALL': METAWORLD_ALL,
-    'METAWORLD_DMC': METAWORLD_DMC,
     'HB_NOHANDS': HB_NOHANDS,
-    'HB_HANDS': HB_HANDS,
-    'HB_EASY': HB_EASY,
     'HB_BASIC': HB_BASIC,
-    'SHADOWHAND_TRAIN': SHADOWHAND_TRAIN,
-    'SHADOWHAND_TEST': SHADOWHAND_TEST,
-    'TEST_SINGLE': TEST_SINGLE,
-    'TEST_MULTI': TEST_MULTI,
+    'HB_EASY': HB_EASY,
     'TEST_MULTI_VARYING': TEST_MULTI_VARYING,
+    'HB_HANDS': HB_HANDS,
     'HB_HANDS_EASY': HB_HANDS_EASY,
     'HB_BOOKSHELF': HB_BOOKSHELF,
     'HB_INSERT': HB_INSERT,
+    'HB_TEST': HB_TEST,
+    'HB_MANI_4': HB_MANI_4,
+    'HB_MANI_6': HB_MANI_6,
+    'HB_MANI_8': HB_MANI_8,
     'HB_MIX_2': HB_MIX_2,
+    'HB_MIX_4': HB_MIX_4,
+    'HB_MIX_6': HB_MIX_6,
+    'HB_MIX_8': HB_MIX_8,
+    'HB_LOCO_2': HB_LOCO_2,
+    'HB_LOCO_4': HB_LOCO_4,
+    'HB_LOCO_6': HB_LOCO_6,
+    'WALKER3': WALKER3,
+    'HB_INSERT_SMALL': HB_INSERT_SMALL,
+    'HB_INSERT_NORMAL': HB_INSERT_NORMAL,
+    'HB_MANI_6_different': HB_MANI_6_different,
+    'HB_MANI_2_bookshelf': HB_MANI_2_bookshelf,
+    'HB_MANI_2_door_window': HB_MANI_2_door_window,
+    'HB_MANI_4_single_insert_shelf': HB_MANI_4_single_insert_shelf,
+    'HB_MANI_4_no_insert_shelf': HB_MANI_4_no_insert_shelf,
     }
 
 try:
@@ -389,10 +527,21 @@ def get_environment_list(env_names: str | list):
         if env_names.startswith("[") and env_names.endswith("]"):
             parsed = literal_eval(env_names)
             if isinstance(parsed, list):
-                return [str(name).strip() for name in parsed]
+                resolved = []
+                for name in parsed:
+                    resolved.extend(get_environment_list(str(name).strip()))
+                return resolved
         if "," in env_names:
-            return [name.strip() for name in env_names.split(",") if name.strip()]
+            resolved = []
+            for name in env_names.split(","):
+                name = name.strip()
+                if name:
+                    resolved.extend(get_environment_list(name))
+            return resolved
         return [env_names]
     elif isinstance(env_names, (list, tuple, ListConfig)):
-        return list(env_names)
+        resolved = []
+        for name in env_names:
+            resolved.extend(get_environment_list(str(name).strip()))
+        return resolved
     raise TypeError(f"Unsupported env_names type: {type(env_names)!r}")
