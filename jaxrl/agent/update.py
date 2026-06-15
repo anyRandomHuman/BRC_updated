@@ -493,6 +493,7 @@ def update_actor(key: PRNGKey, models, batch: Batch, static_inputs):
             _, new_info = vmap_loss_fn(new_actor.params)
             updated_task_loss = info['actor_loss']
             delta = jax.lax.stop_gradient(jnp.log(jnp.abs(updated_task_loss) + 1e-8) - jnp.log(jnp.abs(task_loss) + 1e-8))
+            info.update({'actor_delta': delta})
 
             def softmax_fn(params):
                 return jax.nn.softmax(params, axis=-1)  # axis=-1对应原代码的dim=-1
