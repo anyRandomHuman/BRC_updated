@@ -215,19 +215,19 @@ HB_HANDS = [
     ]
 
 HB_HANDS_EASY = [
-    'hb/h1hand-insert_normal-v0',
-    'hb/h1hand-room-v0',
-    'hb/h1hand-door-v0',
-    'hb/h1hand-push-v0',
+    'h1hand-insert_normal-v0',
+    'h1hand-room-v0',
+    'h1hand-door-v0',
+    'h1hand-push-v0',
 ]
 
 HB_BOOKSHELF = [
-    'hb/h1hand-bookshelf_simple-v0',
-    'hb/h1hand-bookshelf_hard-v0',
+    'h1hand-bookshelf_simple-v0',
+    'h1hand-bookshelf_hard-v0',
 ]
 HB_INSERT = [
-    'hb/h1hand-insert_small-v0',
-    'hb/h1hand-insert_normal-v0',
+    'h1hand-insert_small-v0',
+    'h1hand-insert_normal-v0',
 ]
 
 SHADOWHAND_TRAIN = [
@@ -351,132 +351,132 @@ SHADOWHAND_TEST = [
     ]
 
 HB_MANI_2=[
-    'hb/h1hand-insert_normal-v0',
-    'hb/h1hand-bookshelf_simple-v0',
+    'h1hand-insert_normal-v0',
+    'h1hand-bookshelf_simple-v0',
 ]
 
 HB_MANI_2_bookshelf=[
-    'hb/h1hand-bookshelf_simple-v0',
-    'hb/h1hand-bookshelf_hard-v0',
+    'h1hand-bookshelf_simple-v0',
+    'h1hand-bookshelf_hard-v0',
 ]
 
 HB_MANI_2_door_window=[
-    'hb/h1hand-door-v0',
-    'hb/h1hand-window-v0',
+    'h1hand-door-v0',
+    'h1hand-window-v0',
 ]
 
 HB_MANI_4=[
-    'hb/h1hand-insert_small-v0',
-    'hb/h1hand-insert_normal-v0',
-    'hb/h1hand-bookshelf_simple-v0',
-    'hb/h1hand-bookshelf_hard-v0',
+    'h1hand-insert_small-v0',
+    'h1hand-insert_normal-v0',
+    'h1hand-bookshelf_simple-v0',
+    'h1hand-bookshelf_hard-v0',
 ]
 
 HB_MANI_6=[
-    'hb/h1hand-insert_small-v0',
-    'hb/h1hand-insert_normal-v0',
-    'hb/h1hand-bookshelf_simple-v0',
-    'hb/h1hand-bookshelf_hard-v0',
-    'hb/h1hand-spoon-v0',
-    'hb/h1hand-push-v0',
+    'h1hand-insert_small-v0',
+    'h1hand-insert_normal-v0',
+    'h1hand-bookshelf_simple-v0',
+    'h1hand-bookshelf_hard-v0',
+    'h1hand-spoon-v0',
+    'h1hand-push-v0',
 ]
 
 HB_MANI_8=[
-    'hb/h1hand-insert_small-v0',
-    'hb/h1hand-insert_normal-v0',
-    'hb/h1hand-bookshelf_simple-v0',
-    'hb/h1hand-bookshelf_hard-v0',
-    'hb/h1hand-spoon-v0',
-    'hb/h1hand-push-v0',
-    'hb/h1hand-door-v0',
-    'hb/h1hand-window-v0',
+    'h1hand-insert_small-v0',
+    'h1hand-insert_normal-v0',
+    'h1hand-bookshelf_simple-v0',
+    'h1hand-bookshelf_hard-v0',
+    'h1hand-spoon-v0',
+    'h1hand-push-v0',
+    'h1hand-door-v0',
+    'h1hand-window-v0',
 ]
 
 HB_MANI_6_different=[
-    'hb/h1hand-insert_normal-v0',
-    'hb/h1hand-bookshelf_simple-v0',
-    'hb/h1hand-spoon-v0',
-    'hb/h1hand-push-v0',
-    'hb/h1hand-door-v0',
-    'hb/h1hand-window-v0',
+    'h1hand-insert_normal-v0',
+    'h1hand-bookshelf_simple-v0',
+    'h1hand-spoon-v0',
+    'h1hand-push-v0',
+    'h1hand-door-v0',
+    'h1hand-window-v0',
 ]
 
 HB_MANI_4_no_insert_shelf=[
-    'hb/h1hand-spoon-v0',
-    'hb/h1hand-push-v0',
-    'hb/h1hand-door-v0',
-    'hb/h1hand-window-v0',
+    'h1hand-spoon-v0',
+    'h1hand-push-v0',
+    'h1hand-door-v0',
+    'h1hand-window-v0',
 ]
 
 HB_MANI_4_single_insert_shelf=[
-    'hb/h1hand-spoon-v0',
-    'hb/h1hand-door-v0',
-    'hb/h1hand-insert_normal-v0',
-    'hb/h1hand-bookshelf_simple-v0',
+    'h1hand-spoon-v0',
+    'h1hand-door-v0',
+    'h1hand-insert_normal-v0',
+    'h1hand-bookshelf_simple-v0',
 ]
 
 HB_MIX_2 = [
-    'hb/h1hand-stand-v0',
-    'hb/h1hand-insert_normal-v0',
+    'h1hand-stand-v0',
+    'h1hand-insert_normal-v0',
 ]
 
 HB_MIX_4 = [
-    'hb/h1hand-stand-v0',
-    'hb/h1hand-walk-v0',
-    'hb/h1hand-insert_normal-v0',
-    'hb/h1hand-bookshelf_simple-v0',
+    'h1hand-stand-v0',
+    'h1hand-walk-v0',
+    'h1hand-insert_normal-v0',
+    'h1hand-bookshelf_simple-v0',
 ]
 
 HB_MIX_6 = [
-    'hb/h1hand-stand-v0',
-    'hb/h1hand-walk-v0',
-    'hb/h1hand-run-v0',
-    'hb/h1hand-insert_normal-v0',
-    'hb/h1hand-bookshelf_simple-v0',
-    'hb/h1hand-push-v0',
+    'h1hand-stand-v0',
+    'h1hand-walk-v0',
+    'h1hand-run-v0',
+    'h1hand-insert_normal-v0',
+    'h1hand-bookshelf_simple-v0',
+    'h1hand-push-v0',
 ]
 
 HB_MIX_8 = [
-    'hb/h1hand-stand-v0',
-    'hb/h1hand-walk-v0',
-    'hb/h1hand-run-v0',
-    'hb/h1hand-insert_normal-v0',
-    'hb/h1hand-bookshelf_simple-v0',
-    'hb/h1hand-push-v0',
-    'hb/h1hand-room-v0',
-    'hb/h1hand-truck-v0',
+    'h1hand-stand-v0',
+    'h1hand-walk-v0',
+    'h1hand-run-v0',
+    'h1hand-insert_normal-v0',
+    'h1hand-bookshelf_simple-v0',
+    'h1hand-push-v0',
+    'h1hand-room-v0',
+    'h1hand-truck-v0',
 ]
 
 HB_LOCO_2 = [
-    'hb/h1hand-stand-v0',
-    'hb/h1hand-walk-v0',
+    'h1hand-stand-v0',
+    'h1hand-walk-v0',
 ]
 
 HB_LOCO_4 = [
-    'hb/h1hand-stand-v0',
-    'hb/h1hand-walk-v0',
-    'hb/h1hand-run-v0',
-    'hb/h1hand-crawl-v0',
+    'h1hand-stand-v0',
+    'h1hand-walk-v0',
+    'h1hand-run-v0',
+    'h1hand-crawl-v0',
 ]
 
 HB_LOCO_6 = [
-    'hb/h1hand-stand-v0',
-    'hb/h1hand-walk-v0',
-    'hb/h1hand-run-v0',
-    'hb/h1hand-crawl-v0',
-    'hb/h1hand-slide-v0',
-    'hb/h1hand-pole-v0',
+    'h1hand-stand-v0',
+    'h1hand-walk-v0',
+    'h1hand-run-v0',
+    'h1hand-crawl-v0',
+    'h1hand-slide-v0',
+    'h1hand-pole-v0',
 ]
 
 HB_INSERT_SMALL = [
-    'hb/h1hand-insert_small-v0', ]
+    'h1hand-insert_small-v0', ]
 
 HB_INSERT_NORMAL = [
-    'hb/h1hand-insert_normal-v0', ]
+    'h1hand-insert_normal-v0', ]
 
 HB_TEST = {
-    'hb/h1-walk-v0',
-    'hb/h1-stand-v0',
+    'h1-walk-v0',
+    'h1-stand-v0',
 }
 
 WALKER3 = {
