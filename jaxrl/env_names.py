@@ -493,6 +493,7 @@ EnvironmentsDict = {
     'HB_BOOKSHELF': HB_BOOKSHELF,
     'HB_INSERT': HB_INSERT,
     'HB_TEST': HB_TEST,
+    'HB_MANI_2': HB_MANI_2,
     'HB_MANI_4': HB_MANI_4,
     'HB_MANI_6': HB_MANI_6,
     'HB_MANI_8': HB_MANI_8,
