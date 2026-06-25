@@ -76,7 +76,7 @@ def main(cfg):
 
     if os.environ.get('SLURM_SUBMIT_DIR') is not None:
         submit_dir = os.environ.get('SLURM_SUBMIT_DIR')
-        save_space = r'/pfs/work9/workspace/scratch/ka_et4232-tcx/checkpoints/dime'
+        save_space = r'/pfs/work9/workspace/scratch/ka_et4232-tcx/checkpoints/BRC'
     else:
         submit_dir = '.'
         save_space = './checkpoints'
