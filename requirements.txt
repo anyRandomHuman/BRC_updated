@@ -6,6 +6,7 @@ flax
 imageio
 wandb
 wandb[media]
+hydra-core
 ml_collections
 Shimmy
 gymnasium==0.29.1

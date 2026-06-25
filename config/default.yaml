@@ -35,6 +35,14 @@ grad_process: fairgrad
 last_init_str: orthogonal
 balance_critic: false
 log_bin_interval: 100
+rollout_checkpoint_path: ""
+rollout_output_dir: "./rollout_videos"
+rollout_episodes: 1
+rollout_temperature: 0.0
+rollout_max_render_steps: 5000
+rollout_render_frameskip: 4
+rollout_video_fps: 15
+rollout_log_to_wandb: false
 
 wandb:
   entity: crusaderx
