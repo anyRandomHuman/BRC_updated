@@ -16,7 +16,7 @@ render: false
 updates_per_step: 2
 width_critic: 4096
 width_actor: 256
-depth_actor: 2
+depth_actor: 1
 save_path: ""
 disable_jit: false
 v_max: 10.0
@@ -42,7 +42,7 @@ rollout_temperature: 0.0
 rollout_max_render_steps: 5000
 rollout_render_frameskip: 4
 rollout_video_fps: 15
-rollout_log_to_wandb: false
+rollout_log_to_wandb: True
 
 wandb:
   entity: crusaderx
