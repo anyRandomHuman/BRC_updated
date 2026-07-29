@@ -420,6 +420,62 @@ def actor_loss_fn(actor_params: Params, models, batch: Batch, key: PRNGKey, stat
     }
 
 
+def KL_constraint_update(params, priority, eps, num_bisection_steps=32,
+                             initial_tau=1.0, min_tau=1e-6, max_tau=1e6,
+                             max_tau_doublings=32):
+    old_weights = jax.nn.softmax(params, axis=-1)
+    priority = jax.lax.stop_gradient(priority)
+    eps = jnp.maximum(eps, 0.0)
+
+    def weights_from_tau(tau):
+        logits = jnp.log(old_weights + 1e-8) + priority / jnp.maximum(tau, min_tau)
+        return jnp.exp(logits - jax.nn.logsumexp(logits))
+
+    def reverse_kl(new_weights):
+        return jnp.sum(new_weights * (
+            jnp.log(new_weights + 1e-8) - jnp.log(old_weights + 1e-8)
+        ))
+
+    def kl_from_tau(tau):
+        return reverse_kl(weights_from_tau(tau))
+
+    def grow_cond(carry):
+        tau_high, count = carry
+        return jnp.logical_and(
+            jnp.logical_and(kl_from_tau(tau_high) > eps, tau_high < max_tau),
+            count < max_tau_doublings,
+        )
+
+    def grow_tau(carry):
+        tau_high, count = carry
+        return jnp.minimum(tau_high * 2.0, max_tau), count + 1
+
+    tau_high, _ = jax.lax.while_loop(
+        grow_cond,
+        grow_tau,
+        (jnp.asarray(initial_tau), jnp.asarray(0)),
+    )
+    tau_low = jnp.asarray(min_tau)
+
+    def bisect_step(_, bounds):
+        low, high = bounds
+        mid = 0.5 * (low + high)
+        too_far = kl_from_tau(mid) > eps
+        return jnp.where(too_far, mid, low), jnp.where(too_far, high, mid)
+
+    _, tau = jax.lax.fori_loop(
+        0,
+        num_bisection_steps,
+        bisect_step,
+        (tau_low, tau_high),
+    )
+    new_weights = weights_from_tau(tau)
+    new_params = jnp.log(new_weights + 1e-8)
+
+    return new_params, {
+        'kl_tau': tau,
+        'kl_divergence': reverse_kl(new_weights),
+    }
 
 def update_actor(key: PRNGKey, models, batch: Batch, static_inputs):
     if static_inputs.get('use_separate_actor_grad', False):
@@ -493,14 +549,22 @@ def update_actor(key: PRNGKey, models, batch: Batch, static_inputs):
             _, new_info = vmap_loss_fn(new_actor.params)
             updated_task_loss = info['actor_loss']
             delta = jax.lax.stop_gradient(jnp.log(jnp.abs(updated_task_loss) + 1e-8) - jnp.log(jnp.abs(task_loss) + 1e-8))
-            info.update({'actor_delta': delta})
+
+            regu = static_inputs['famo_w_regu'] / (info['actor_task_weights'] + 1e-8)
+            delta = delta - regu
+            info.update({'actor_delta': delta, 'actor_task_weight_regu': regu})
 
             def softmax_fn(params):
                 return jax.nn.softmax(params, axis=-1)  # axis=-1对应原代码的dim=-1
 
-            softmax_out, vjp_fun = jax.vjp(softmax_fn, aw_state.params)
-            d = vjp_fun(delta)[0]  # the return is a tuple
-            aw_state = aw_state.apply_gradients(grads=d)
+            if loss_process == 'famo_total_kl':
+                new_aw_params, kl_metrics  = KL_constraint_update(aw_state.params, delta, static_inputs['famo_kl_eps'])
+                aw_state = aw_state.replace(params=new_aw_params)
+                info.update(kl_metrics)
+            else:
+                softmax_out, vjp_fun = jax.vjp(softmax_fn, aw_state.params)
+                d = vjp_fun(delta)[0]  # the return is a tuple
+                aw_state = aw_state.apply_gradients(grads=d)
 
             models = models.replace(aw_state=aw_state)
 

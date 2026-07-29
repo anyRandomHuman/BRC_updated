@@ -237,7 +237,8 @@ class BRC(object):
              'alpha': grad_process_alpha,
              'lr': grad_lr,
             'momentum': grad_momentum,
-                'niter': niter,
+            'niter': niter,
+             **dict(cfg.famo),
              }
         )
         self.cfg = cfg

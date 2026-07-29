@@ -46,3 +46,7 @@ rollout_log_to_wandb: True
 
 wandb:
   entity: crusaderx
+
+famo:
+  famo_w_regu: 0.
+  famo_kl_eps: 0.01
