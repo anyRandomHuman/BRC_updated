@@ -474,37 +474,35 @@ HB_INSERT_SMALL = [
 HB_INSERT_NORMAL = [
     'h1hand-insert_normal-v0', ]
 
-HB_TEST = {
+HB_TEST = [
     'h1-walk-v0',
-    'h1-stand-v0',
-}
+    'h1-stand-v0',]
 
-DMC_WALKER = {
-    'walker-stand', 'walker-walk', 'walker-run'
-}
 
-DMC_WALKER_DOG = {
+DMC_WALKER = ['walker-stand', 'walker-walk', 'walker-run']
+
+DMC_WALKER_DOG = [
     'walker-stand', 'walker-walk', 'walker-run',
     'dog-stand', 'dog-walk', 'dog-run',
-}
+]
 
-DMC_LOCO_3 = {
+DMC_LOCO_3 = [
     'walker-stand',
     'dog-stand',
     'humanoid-stand',
-}
+]
 
-DMC_LOCO_6 = {
+DMC_LOCO_6 = [
     'walker-stand', 'walker-walk',
     'dog-stand', 'dog-walk',
     'humanoid-stand', 'humanoid-walk',
-}
+]
 
-DMC_LOCO_9 = {
+DMC_LOCO_9 = [
     'walker-stand', 'walker-walk', 'walker-run',
     'dog-stand', 'dog-walk', 'dog-run',
     'humanoid-stand', 'humanoid-walk', 'humanoid-run',
-}
+]
 
 EnvironmentsDict = {
     'METAWORLD_ALL': METAWORLD_ALL,
