@@ -480,30 +480,30 @@ HB_TEST = {
 }
 
 DMC_WALKER = {
-    'dm_control/walker-stand', 'dm_control/walker-walk', 'dm_control/walker-run'
+    'walker-stand', 'walker-walk', 'walker-run'
 }
 
 DMC_WALKER_DOG = {
-    'dm_control/walker-stand', 'dm_control/walker-walk', 'dm_control/walker-run',
-    'dm_control/dog-stand', 'dm_control/dog-walk', 'dm_control/dog-run',
+    'walker-stand', 'walker-walk', 'walker-run',
+    'dog-stand', 'dog-walk', 'dog-run',
 }
 
 DMC_LOCO_3 = {
-    'dm_control/walker-stand',
-    'dm_control/dog-stand',
-    'dm_control/humanoid-stand',
+    'walker-stand',
+    'dog-stand',
+    'humanoid-stand',
 }
 
 DMC_LOCO_6 = {
-    'dm_control/walker-stand', 'dm_control/walker-walk',
-    'dm_control/dog-stand', 'dm_control/dog-walk',
-    'dm_control/humanoid-stand', 'dm_control/humanoid-walk',
+    'walker-stand', 'walker-walk',
+    'dog-stand', 'dog-walk',
+    'humanoid-stand', 'humanoid-walk',
 }
 
 DMC_LOCO_9 = {
-    'dm_control/walker-stand', 'dm_control/walker-walk', 'dm_control/walker-run',
-    'dm_control/dog-stand', 'dm_control/dog-walk', 'dm_control/dog-run',
-    'dm_control/humanoid-stand', 'dm_control/humanoid-walk', 'dm_control/humanoid-run',
+    'walker-stand', 'walker-walk', 'walker-run',
+    'dog-stand', 'dog-walk', 'dog-run',
+    'humanoid-stand', 'humanoid-walk', 'humanoid-run',
 }
 
 EnvironmentsDict = {
