@@ -74,7 +74,86 @@ class ParallelReplayBuffer:
         #              masks=np.take_along_axis(self.masks, indxs, axis=1),
         #              next_observations=np.take_along_axis(self.next_observations, indxs[..., None], axis=1),
         #              task_ids=task_ids)
-        
+
+    def sample_task_proportions(
+        self,
+        batch_size: int,
+        num_batches: int,
+        task_proportions: np.ndarray,
+        min_samples_per_task: int = 0,
+    ):
+        """Sample fixed-size, flat batches with variable task composition.
+
+        ``task_proportions`` may contain one distribution shared by every batch,
+        or one distribution per batch. Counts are drawn independently for every
+        batch, so the JAX-visible batch shape stays fixed while task counts vary.
+        """
+        if self.size == 0:
+            raise ValueError("Cannot sample from an empty replay buffer.")
+        if batch_size <= 0 or num_batches <= 0:
+            raise ValueError("batch_size and num_batches must be positive.")
+        if min_samples_per_task < 0:
+            raise ValueError("min_samples_per_task must be non-negative.")
+
+        reserved_samples = min_samples_per_task * self.num_tasks
+        if reserved_samples > batch_size:
+            raise ValueError(
+                "min_samples_per_task * num_tasks cannot exceed batch_size."
+            )
+
+        proportions = np.asarray(task_proportions, dtype=np.float64)
+        if proportions.ndim == 1:
+            if proportions.shape != (self.num_tasks,):
+                raise ValueError(
+                    f"Expected {self.num_tasks} task proportions, got {proportions.shape}."
+                )
+            proportions = np.broadcast_to(proportions, (num_batches, self.num_tasks))
+        elif proportions.shape != (num_batches, self.num_tasks):
+            raise ValueError(
+                "task_proportions must have shape (num_tasks,) or "
+                f"(num_batches, num_tasks); got {proportions.shape}."
+            )
+
+        if not np.all(np.isfinite(proportions)) or np.any(proportions < 0):
+            raise ValueError("task_proportions must be finite and non-negative.")
+        row_sums = proportions.sum(axis=1, keepdims=True)
+        if np.any(row_sums <= 0):
+            raise ValueError("Every task-proportion row must have a positive sum.")
+        proportions = proportions / row_sums
+
+        batch_task_ids = np.empty((num_batches, batch_size), dtype=np.int32)
+        batch_sample_ids = np.empty((num_batches, batch_size), dtype=np.int64)
+        remaining = batch_size - reserved_samples
+
+        for batch_index in range(num_batches):
+            counts = np.random.multinomial(remaining, proportions[batch_index])
+            counts += min_samples_per_task
+            if np.any(counts == 0):
+                raise ValueError(
+                    "Dynamic sampling requires every task to have at least one "
+                    f"sample, but batch {batch_index} has counts {counts.tolist()}."
+                )
+            task_ids = np.repeat(
+                np.arange(self.num_tasks, dtype=np.int32), counts
+            )
+            # Shuffle so downstream code cannot depend on samples being grouped by task.
+            permutation = np.random.permutation(batch_size)
+            batch_task_ids[batch_index] = task_ids[permutation]
+            batch_sample_ids[batch_index] = np.random.randint(
+                self.size, size=batch_size
+            )[permutation]
+
+        return Batch(
+            observations=self.observations[batch_task_ids, batch_sample_ids],
+            actions=self.actions[batch_task_ids, batch_sample_ids],
+            rewards=self.rewards[batch_task_ids, batch_sample_ids],
+            masks=self.masks[batch_task_ids, batch_sample_ids],
+            next_observations=self.next_observations[
+                batch_task_ids, batch_sample_ids
+            ],
+            task_ids=batch_task_ids,
+        )
+
     def save(self, save_dir: str):
         data_path = os.path.join(save_dir, 'buffer')
         # because of memory limits, we will dump the buffer into multiple files
@@ -113,4 +192,3 @@ class ParallelReplayBuffer:
             self.masks[:, i*chunk_size : (i+1)*chunk_size], \
             self.next_observations[:, i*chunk_size : (i+1)*chunk_size] = data_chunk
         self.size, self.insert_index = pickle.load(open(os.path.join(save_dir, 'buffer_info'), 'rb'))
-

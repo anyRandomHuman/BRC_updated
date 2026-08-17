@@ -1,0 +1,12 @@
+defaults:
+  - default
+  - _self_
+
+learner: dynamic_sampling
+job_type: dynamic_sampling
+
+dynamic_sampling:
+  loss_ema: 0.9
+  temperature: 1.0
+  min_probability: 0.01
+  min_samples_per_task: 0
