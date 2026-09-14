@@ -504,6 +504,24 @@ DMC_LOCO_9 = [
     'humanoid-stand', 'humanoid-walk', 'humanoid-run',
 ]
 
+MYO_HAND_EASY = [
+    'myo/myoHandPoseFixed-v0',
+    'myo/myoHandReachFixed-v0',
+    'myo/myoHandKeyTurnFixed-v0',
+    'myo/myoHandObjHoldFixed-v0',
+    'myo/myoHandPenTwirlFixed-v0',
+    'myo/myoHandReorient8-v0',
+]
+
+MYO_HAND_HARD = [
+    'myo/myoHandPoseRandom-v0',
+    'myo/myoHandReachRandom-v0',
+    'myo/myoHandKeyTurnRandom-v0',
+    'myo/myoHandObjHoldRandom-v0',
+    'myo/myoHandPenTwirlRandom-v0',
+    'myo/myoHandReorient100-v0',
+]
+
 EnvironmentsDict = {
     'METAWORLD_ALL': METAWORLD_ALL,
     'METAWORLD_DMC': METAWORLD_DMC,
@@ -541,6 +559,8 @@ EnvironmentsDict = {
     'HB_MANI_2_door_window': HB_MANI_2_door_window,
     'HB_MANI_4_single_insert_shelf': HB_MANI_4_single_insert_shelf,
     'HB_MANI_4_no_insert_shelf': HB_MANI_4_no_insert_shelf,
+    'MYO_HAND_EASY': MYO_HAND_EASY,
+    'MYO_HAND_HARD': MYO_HAND_HARD,
     }
 
 try:
