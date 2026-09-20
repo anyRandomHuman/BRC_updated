@@ -63,10 +63,20 @@ def _make_env_shadowhand(env_name: str, seed: int = 0) -> gym.Env:
     env = FlattenObservationShadowhandWrapper(env)
     return env
 
+def _make_env_myosuite(env_name, seed=0, num_env=1, render_mode=None):
+    import myosuite
+    if num_env > 1:
+        env = gym.make_vec(env_name, num_envs=num_env,vectorization_mode="sync", render_mode=render_mode)
+    else:
+        env = gym.make(env_name, autoreset=False, render_mode=render_mode)
+    return env
+
 def make_env(env_name: str, seed: int = 0) -> gym.Env:
     env = None
     if '-goal-observable' in env_name:
         env = _make_env_metaworld(env_name, seed)
+    elif 'myo' in env_name:
+        env = _make_env_myosuite(env_name, seed)
     elif '-v0' in env_name:
         env = _make_env_humanoidbench(env_name, seed)
     elif '-' in env_name:

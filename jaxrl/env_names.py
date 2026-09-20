@@ -522,6 +522,11 @@ MYO_HAND_HARD = [
     'myoHandReorient100-v0',
 ]
 
+MYO_HAND_TEST = [
+    'myoHandPoseFixed-v0',
+    'myoHandReachFixed-v0',
+]
+
 EnvironmentsDict = {
     'METAWORLD_ALL': METAWORLD_ALL,
     'METAWORLD_DMC': METAWORLD_DMC,
@@ -561,6 +566,7 @@ EnvironmentsDict = {
     'HB_MANI_4_no_insert_shelf': HB_MANI_4_no_insert_shelf,
     'MYO_HAND_EASY': MYO_HAND_EASY,
     'MYO_HAND_HARD': MYO_HAND_HARD,
+    'MYO_HAND_TEST': MYO_HAND_TEST,
     }
 
 try:
