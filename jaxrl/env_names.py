@@ -505,21 +505,21 @@ DMC_LOCO_9 = [
 ]
 
 MYO_HAND_EASY = [
-    'myo/myoHandPoseFixed-v0',
-    'myo/myoHandReachFixed-v0',
-    'myo/myoHandKeyTurnFixed-v0',
-    'myo/myoHandObjHoldFixed-v0',
-    'myo/myoHandPenTwirlFixed-v0',
-    'myo/myoHandReorient8-v0',
+    'myoHandPoseFixed-v0',
+    'myoHandReachFixed-v0',
+    'myoHandKeyTurnFixed-v0',
+    'myoHandObjHoldFixed-v0',
+    'myoHandPenTwirlFixed-v0',
+    'myoHandReorient8-v0',
 ]
 
 MYO_HAND_HARD = [
-    'myo/myoHandPoseRandom-v0',
-    'myo/myoHandReachRandom-v0',
-    'myo/myoHandKeyTurnRandom-v0',
-    'myo/myoHandObjHoldRandom-v0',
-    'myo/myoHandPenTwirlRandom-v0',
-    'myo/myoHandReorient100-v0',
+    'myoHandPoseRandom-v0',
+    'myoHandReachRandom-v0',
+    'myoHandKeyTurnRandom-v0',
+    'myoHandObjHoldRandom-v0',
+    'myoHandPenTwirlRandom-v0',
+    'myoHandReorient100-v0',
 ]
 
 EnvironmentsDict = {
