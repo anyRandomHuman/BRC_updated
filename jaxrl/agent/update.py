@@ -417,6 +417,7 @@ def actor_loss_fn(actor_params: Params, models, batch: Batch, key: PRNGKey, stat
     return actor_loss, {
         'actor_loss': actor_loss,
         'actor_entropy': -log_probs.mean(),
+        'negative_q': -q_values.mean(),
     }
 
 
@@ -543,11 +544,11 @@ def update_actor(key: PRNGKey, models, batch: Batch, static_inputs):
             if loss_process == 'famo_total':
                 task_loss = models.actor_loss
             else:
-                task_loss = info['actor_loss']
+                task_loss = info['negative_q']
             aw_state = models.aw_state
 
             _, new_info = vmap_loss_fn(new_actor.params)
-            updated_task_loss = info['actor_loss']
+            updated_task_loss = new_info['negative_q']
             delta = jax.lax.stop_gradient(jnp.log(jnp.abs(updated_task_loss) + 1e-8) - jnp.log(jnp.abs(task_loss) + 1e-8))
 
             regu = static_inputs['famo_w_regu'] / (info['actor_task_weights'] + 1e-8)

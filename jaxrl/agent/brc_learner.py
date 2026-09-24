@@ -293,7 +293,7 @@ class BRC(object):
             self.static_inputs = FrozenDict(new_static)
 
             self.models = self.models.replace(
-                actor_loss=info['actor_loss'],
+                actor_loss=info['negative_q'],
                 critic_loss=info['critic_loss'],
             )
         return info
