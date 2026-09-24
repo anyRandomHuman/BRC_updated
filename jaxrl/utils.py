@@ -30,6 +30,44 @@ def compute_normalized_gram(G):
     GG = jnp.matmul(normed_G, normed_G.T)
     return GG, max_norm
 
+def task_weight_bounds(num_tasks, max_ratio=2.0):
+    if max_ratio is None or max_ratio <= 0.0:
+        return 0., 1.0
+    lower = 1.0 / (1.0 + (num_tasks - 1) * max_ratio)
+    upper = max_ratio / (max_ratio + num_tasks - 1)
+    return lower, upper
+
+def bound_temp(logits, lower, upper, k = None):
+    """
+
+    Args:
+        logits:
+        k: num of logits to normalize
+        lower:
+        upper:
+
+    Returns:
+
+    """
+
+    if k is None:
+        k = logits.shape[-1]
+    if lower <= 0.:
+        lower = 1e-8
+    if upper >= 1.0:
+        upper = 1 - 1e-8
+    delta_z = jnp.max(logits, axis=0) - jnp.min(logits, axis=0)
+
+    # 2. Calculate theoretical minimum temperatures for both bounds
+    denom_L = jnp.log((1 - lower) / (lower * (k - 1)))
+    denom_U = jnp.log((upper * (k - 1)) / (1 - upper))
+
+    tau_L = delta_z / denom_L
+    tau_U = delta_z / denom_U
+
+    tau = jnp.maximum(1.0, jnp.maximum(tau_L, tau_U))
+    return tau
+
 @flax.struct.dataclass
 class SaveState:
     params: Params

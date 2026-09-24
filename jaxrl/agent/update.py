@@ -4,7 +4,7 @@ import jax
 import optax
 from jax import tree_map
 
-from jaxrl.utils import Batch, Model, Params, PRNGKey, tree_norm, flatten_grads, compute_normalized_gram
+from jaxrl.utils import Batch, Model, Params, PRNGKey, tree_norm, flatten_grads, compute_normalized_gram, bound_temp
 
 @functools.partial(jax.jit, static_argnames=('multitask'))
 def build_actor_input(critic: Model, observations: jnp.ndarray, task_ids: jnp.ndarray, multitask: bool):
@@ -515,11 +515,11 @@ def update_actor(key: PRNGKey, models, batch: Batch, static_inputs):
         metrics = {}
         if static_inputs['warmup_done']:
             if 'famo' in loss_process:
-                weights = jax.nn.softmax(models.aw_state.params, -1)
+                temp = bound_temp(models.aw_state.params, static_inputs['w_lower_bound'], static_inputs['w_upper_bound'])
+                weights = jax.nn.softmax(models.aw_state.params / temp, -1)
                 co = jax.lax.stop_gradient((weights / (task_loss + 1e-8)).sum())
                 weighted_loss = (weights * jnp.log(task_loss + 1e-8) / co)
                 actor_loss = weighted_loss.sum()
-
                 task_metrics = {**task_metrics, 'actor_task_weights': weights}
             elif loss_process == 'mean':
                 actor_loss = jnp.mean(task_loss)

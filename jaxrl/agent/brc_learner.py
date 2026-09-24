@@ -20,7 +20,8 @@ from jaxrl.agent.update import (
 )
 
 from jaxrl.networks import NormalTanhPolicy, Critic, Temperature
-from jaxrl.utils import Model, PRNGKey, Batch
+from jaxrl.utils import Model, PRNGKey, Batch, task_weight_bounds
+
 
 @struct.dataclass
 class Models:
@@ -177,7 +178,12 @@ class BRC(object):
         task_embedding_init = jnp.zeros((1, embedding_size))
         task_ids_init = self.task_ids[:1]
         self.multitask = True if num_tasks > 1 else False
-        
+
+        task_weight_ratio_bound = cfg.get('task_weight_ratio_bound', None)
+        l, u = 0, 1
+        if task_weight_ratio_bound is not None:
+            l, u = task_weight_bounds(num_tasks, task_weight_ratio_bound)
+
         actor_init = jnp.concatenate((observations, task_embedding_init), axis=-1) if self.multitask else observations
         
         def _init_models(seed):
@@ -239,6 +245,8 @@ class BRC(object):
             'momentum': grad_momentum,
             'niter': niter,
              **dict(cfg.famo),
+             'w_lower_bound': l,
+             'w_upper_bound': u,
              }
         )
         self.cfg = cfg
