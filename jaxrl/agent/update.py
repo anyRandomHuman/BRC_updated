@@ -420,6 +420,36 @@ def actor_loss_fn(actor_params: Params, models, batch: Batch, key: PRNGKey, stat
     }
 
 
+def _actor_famo_loss_gaps(task_loss, temperature, static_inputs):
+    """Map the signed SAC actor objective to the positive losses FAMO needs.
+
+    FAMO assumes that every task loss is non-negative. The SAC actor objective
+    (alpha * log pi - Q) does not satisfy that assumption, and its zero has no
+    optimization significance. Dividing by the raw objective therefore makes
+    the update singular whenever one task crosses zero.
+
+    The distributional critic bounds Q from above by ``v_max``. The entropy of
+    the tanh policy is no greater than that of its pre-tanh diagonal Gaussian,
+    whose log standard deviation is capped by ``actor_log_std_max``. This gives
+    a conservative lower bound for the expected actor objective. Subtracting
+    it preserves each task gradient while providing the positive gap required
+    by FAMO.
+    """
+    action_dim = static_inputs['action_dim']
+    log_std_max = static_inputs.get('actor_log_std_max', 2.0)
+    eps = static_inputs.get('famo_loss_eps', 1e-6)
+
+    gaussian_entropy_upper_bound = action_dim * (
+        0.5 * jnp.log(2.0 * jnp.pi * jnp.e) + log_std_max
+    )
+    loss_lower_bound = (
+        -static_inputs['v_max']
+        - jax.lax.stop_gradient(temperature) * gaussian_entropy_upper_bound
+    )
+    loss_gaps = jnp.maximum(task_loss - loss_lower_bound, eps)
+    return loss_gaps, loss_lower_bound
+
+
 def KL_constraint_update(params, priority, eps, num_bisection_steps=32,
                              initial_tau=1.0, min_tau=1e-6, max_tau=1e6,
                              max_tau_doublings=32):
@@ -507,6 +537,14 @@ def update_actor(key: PRNGKey, models, batch: Batch, static_inputs):
 
     loss_process = static_inputs['loss_process']
 
+    def actor_weight_fn(params):
+        weight_temp = bound_temp(
+            params,
+            static_inputs['w_lower_bound'],
+            static_inputs['w_upper_bound'],
+        )
+        return jax.nn.softmax(params / weight_temp, axis=-1)
+
     # new_args = (args[0], args[1], args[2], args[3], new_batch, args[5], args[6], args[7])
     def vmap_loss_fn(params):
         vmap_loss = jax.vmap(actor_loss_fn, in_axes=(None, None, 0, None, None))
@@ -515,12 +553,24 @@ def update_actor(key: PRNGKey, models, batch: Batch, static_inputs):
         metrics = {}
         if static_inputs['warmup_done']:
             if 'famo' in loss_process:
-                temp = bound_temp(models.aw_state.params, static_inputs['w_lower_bound'], static_inputs['w_upper_bound'])
-                weights = jax.nn.softmax(models.aw_state.params / temp, -1)
-                co = jax.lax.stop_gradient((weights / (task_loss + 1e-8)).sum())
-                weighted_loss = (weights * jnp.log(task_loss + 1e-8) / co)
+                weights = actor_weight_fn(models.aw_state.params)
+                loss_gaps, loss_lower_bound = _actor_famo_loss_gaps(
+                    task_loss, models.temp().mean(), static_inputs
+                )
+                inverse_loss_weights = weights / loss_gaps
+                co = jax.lax.stop_gradient(inverse_loss_weights.sum())
+                effective_weights = jax.lax.stop_gradient(inverse_loss_weights / co)
+                weighted_loss = weights * jnp.log(loss_gaps) / co
                 actor_loss = weighted_loss.sum()
-                task_metrics = {**task_metrics, 'actor_task_weights': weights}
+                task_metrics = {
+                    **task_metrics,
+                    'actor_task_weights': weights,
+                    'actor_effective_task_weights': effective_weights,
+                    'actor_famo_loss_gap': loss_gaps,
+                    'actor_famo_loss_lower_bound': jnp.broadcast_to(
+                        loss_lower_bound, task_loss.shape
+                    ),
+                }
             elif loss_process == 'mean':
                 actor_loss = jnp.mean(task_loss)
             elif loss_process == 'inverse_scale':
@@ -547,22 +597,27 @@ def update_actor(key: PRNGKey, models, batch: Batch, static_inputs):
             aw_state = models.aw_state
 
             _, new_info = vmap_loss_fn(new_actor.params)
-            updated_task_loss = info['actor_loss']
-            delta = jax.lax.stop_gradient(jnp.log(jnp.abs(updated_task_loss) + 1e-8) - jnp.log(jnp.abs(task_loss) + 1e-8))
+            updated_task_loss = new_info['actor_loss']
+            reference_loss_gaps, _ = _actor_famo_loss_gaps(
+                task_loss, models.temp().mean(), static_inputs
+            )
+            updated_loss_gaps, _ = _actor_famo_loss_gaps(
+                updated_task_loss, models.temp().mean(), static_inputs
+            )
+            delta = jax.lax.stop_gradient(
+                jnp.log(reference_loss_gaps) - jnp.log(updated_loss_gaps)
+            )
 
             regu = static_inputs['famo_w_regu'] / (info['actor_task_weights'] + 1e-8)
             delta = delta - regu
             info.update({'actor_delta': delta, 'actor_task_weight_regu': regu})
-
-            def softmax_fn(params):
-                return jax.nn.softmax(params, axis=-1)  # axis=-1对应原代码的dim=-1
 
             if loss_process == 'famo_total_kl':
                 new_aw_params, kl_metrics  = KL_constraint_update(aw_state.params, delta, static_inputs['famo_kl_eps'])
                 aw_state = aw_state.replace(params=new_aw_params)
                 info.update(kl_metrics)
             else:
-                softmax_out, vjp_fun = jax.vjp(softmax_fn, aw_state.params)
+                _, vjp_fun = jax.vjp(actor_weight_fn, aw_state.params)
                 d = vjp_fun(delta)[0]  # the return is a tuple
                 aw_state = aw_state.apply_gradients(grads=d)
 

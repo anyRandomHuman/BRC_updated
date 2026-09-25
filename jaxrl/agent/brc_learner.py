@@ -227,6 +227,8 @@ class BRC(object):
             {'discount': self.discount,
             'tau': self.tau,
             'target_entropy': self.target_entropy,
+            'action_dim': action_dim,
+            'actor_log_std_max': 2.0,
             'num_bins': self.num_bins,
             'v_max': self.v_max,
             'multitask': self.multitask,

@@ -2,3 +2,7 @@
 *.log
 *.json
 wandb/*
+*.txt
+*.png
+checkpoints/*
+outputs/*
