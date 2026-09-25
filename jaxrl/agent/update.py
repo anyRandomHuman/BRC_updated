@@ -417,6 +417,7 @@ def actor_loss_fn(actor_params: Params, models, batch: Batch, key: PRNGKey, stat
     return actor_loss, {
         'actor_loss': actor_loss,
         'actor_entropy': -log_probs.mean(),
+        'negative_q': -q_values.mean(),
     }
 
 
@@ -593,11 +594,11 @@ def update_actor(key: PRNGKey, models, batch: Batch, static_inputs):
             if loss_process == 'famo_total':
                 task_loss = models.actor_loss
             else:
-                task_loss = info['actor_loss']
+                task_loss = info['negative_q']
             aw_state = models.aw_state
 
             _, new_info = vmap_loss_fn(new_actor.params)
-            updated_task_loss = new_info['actor_loss']
+            updated_task_loss = new_info['negative_q']
             reference_loss_gaps, _ = _actor_famo_loss_gaps(
                 task_loss, models.temp().mean(), static_inputs
             )
