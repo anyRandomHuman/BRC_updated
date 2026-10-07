@@ -555,23 +555,34 @@ def update_actor(key: PRNGKey, models, batch: Batch, static_inputs):
         if static_inputs['warmup_done']:
             if 'famo' in loss_process:
                 weights = actor_weight_fn(models.aw_state.params)
-                loss_gaps, loss_lower_bound = _actor_famo_loss_gaps(
-                    task_loss, models.temp().mean(), static_inputs
+                # loss_gaps, loss_lower_bound = _actor_famo_loss_gaps(
+                #     task_loss, models.temp().mean(), static_inputs
+                # )
+                # inverse_loss_weights = weights / loss_gaps
+                actor_loss_scale = jnp.hypot(task_loss, static_inputs['famo_actor_tau'])
+                effective_weights = weights / actor_loss_scale
+                effective_weights /= effective_weights.sum()
+                actor_loss = jnp.sum(
+                    jax.lax.stop_gradient(effective_weights) * task_loss
                 )
-                inverse_loss_weights = weights / loss_gaps
-                co = jax.lax.stop_gradient(inverse_loss_weights.sum())
-                effective_weights = jax.lax.stop_gradient(inverse_loss_weights / co)
-                weighted_loss = weights * jnp.log(loss_gaps) / co
-                actor_loss = weighted_loss.sum()
-                task_metrics = {
-                    **task_metrics,
+                task_metrics |= {
                     'actor_task_weights': weights,
                     'actor_effective_task_weights': effective_weights,
-                    'actor_famo_loss_gap': loss_gaps,
-                    'actor_famo_loss_lower_bound': jnp.broadcast_to(
-                        loss_lower_bound, task_loss.shape
-                    ),
+                    'actor_loss_scale': actor_loss_scale,
                 }
+                # co = jax.lax.stop_gradient(inverse_loss_weights.sum())
+                # effective_weights = jax.lax.stop_gradient(inverse_loss_weights / co)
+                # weighted_loss = weights * jnp.log(loss_gaps) / co
+                # actor_loss = weighted_loss.sum()
+                # task_metrics = {
+                #     **task_metrics,
+                #     'actor_task_weights': weights,
+                #     'actor_effective_task_weights': effective_weights,
+                #     'actor_famo_loss_gap': loss_gaps,
+                #     'actor_famo_loss_lower_bound': jnp.broadcast_to(
+                #         loss_lower_bound, task_loss.shape
+                #     ),
+                # }
             elif loss_process == 'mean':
                 actor_loss = jnp.mean(task_loss)
             elif loss_process == 'inverse_scale':
@@ -599,14 +610,11 @@ def update_actor(key: PRNGKey, models, batch: Batch, static_inputs):
 
             _, new_info = vmap_loss_fn(new_actor.params)
             updated_task_loss = new_info['negative_q']
-            reference_loss_gaps, _ = _actor_famo_loss_gaps(
-                task_loss, models.temp().mean(), static_inputs
-            )
-            updated_loss_gaps, _ = _actor_famo_loss_gaps(
-                updated_task_loss, models.temp().mean(), static_inputs
-            )
+
+            tau = static_inputs['famo_actor_tau']
             delta = jax.lax.stop_gradient(
-                jnp.log(reference_loss_gaps) - jnp.log(updated_loss_gaps)
+                jnp.arcsinh(task_loss / tau)
+                - jnp.arcsinh(updated_task_loss / tau)
             )
 
             regu = static_inputs['famo_w_regu'] / (info['actor_task_weights'] + 1e-8)
