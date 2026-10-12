@@ -4,6 +4,7 @@ import hydra
 # os.environ['MUJOCO_GL'] = 'egl'
 
 from jaxrl.agent.brc_learner import BRC
+from jaxrl.agent.dynamic_sampling_learner import DynamicSamplingLearner
 from jaxrl.replay_buffer import ParallelReplayBuffer
 from jaxrl.envs import ParallelEnv
 from jaxrl.normalizer import RewardNormalizer
@@ -12,7 +13,7 @@ from jaxrl.env_names import get_environment_list
 import wandb
 
 
-@hydra.main(config_path='config', config_name='default')
+@hydra.main(config_path='config', config_name='test')
 def main(cfg):
     if cfg.log_to_wandb:
         wandb.init(
@@ -134,36 +135,31 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as ex:
+        # 1. Capture the full string of the traceback
         error_msg = traceback.format_exc()
 
-        # Print to console so cluster logs capture full traceback.
-        print("-- exception occurred. traceback:")
+        # 2. Print to console (so it shows in cluster logs like Slurm output)
+        print("-- exception occured. traceback :")
         print(error_msg, flush=True)
         print("--------------------------------\n")
 
-        if wandb.run is not None and not 'test' in wandb.run.project:
-            try:
-                # Persist crash metadata in the run itself.
-                wandb.run.summary["crashed"] = True
-                wandb.run.summary["crash_type"] = type(ex).__name__
-                wandb.run.summary["crash_message"] = str(ex)
-                # Keep traceback length bounded for summary storage.
-                wandb.run.summary["crash_traceback"] = error_msg[-64000:]
-                wandb.log({"crashed": 1})
+        if wandb.run is not None:
+            # 3. Explicitly tell W&B about the error
+            wandb.alert(
+                title="Run Crashed",
+                text=f"Error: {ex}\n\nTraceback:\n{error_msg}",
+                level=wandb.AlertLevel.ERROR
+            )
 
-                # Alert is best-effort; summary logging above is the source of truth.
-                wandb.alert(
-                    title="Run Crashed",
-                    text=f"{type(ex).__name__}: {ex}",
-                    level=wandb.AlertLevel.ERROR,
-                )
-            except Exception as wandb_ex:
-                print(f"Failed to write crash info to wandb: {wandb_ex}", flush=True)
-            finally:
-                wandb.finish(exit_code=1)
+            # Optional: Save error to summary for table sorting
+            wandb.run.summary["crash_message"] = str(ex)
 
-        # Re-raise original exception so job status is failed.
-        raise
+            # 4. Mark the run as failed explicitly
+            wandb.finish(exit_code=1)
+
+            # 5. Re-raise the exception so the cluster knows the job failed
+        # (This ensures the job status is 'FAILED' in Slurm/K8s)
+        raise ex
     else:
         if wandb.run is not None:
             wandb.finish(exit_code=0)
