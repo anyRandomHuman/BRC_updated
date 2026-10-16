@@ -1,5 +1,5 @@
 defaults:
-  - fairgrad
+  - default
   - _self_
 
 eval_episodes: 1
@@ -14,13 +14,17 @@ start_training: 30
 log_to_wandb: False
 render: False
 width_critic: 3
-env_names: HB_BASIC
-disable_jit: False
+
+
+disable_jit: True
 project: BRC_test
-loss_process: famo_total
 warmup_epochs: 1
 last_init_str: orthogonal
 width_actor: 3
 depth_actor: 1
 
 balance_critic: False
+
+env_names: MYO_HAND_EASY
+loss_process: famo_total
+
