@@ -1,4 +1,6 @@
 import os
+import shlex
+import sys
 import traceback
 from pathlib import Path
 
@@ -61,6 +63,22 @@ def _build_agent(cfg, env, num_tasks):
     )
 
 
+def _check_video_backend():
+    try:
+        import imageio_ffmpeg
+        imageio_ffmpeg.get_ffmpeg_version()
+    except (ImportError, OSError, RuntimeError) as error:
+        install_command = shlex.join([
+            sys.executable, '-m', 'pip', 'install', '--no-deps',
+            '--only-binary=:all:', 'imageio-ffmpeg==0.6.0',
+        ])
+        raise RuntimeError(
+            f'MP4 recording requires a working imageio-ffmpeg backend in {sys.executable}. '
+            f'Install it without changing other packages: {install_command}. '
+            f'Backend error: {error}'
+        ) from error
+
+
 def _save_videos(renders, env_names, output_dir, fps):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -71,7 +89,7 @@ def _save_videos(renders, env_names, output_dir, fps):
         frames = np.transpose(render, (0, 2, 3, 1))
         frames = np.asarray(np.clip(frames, 0, 255), dtype=np.uint8)
         video_path = output_dir / f'{env_name}.mp4'
-        imageio.mimsave(video_path, frames, fps=fps)
+        imageio.mimsave(video_path, frames, fps=fps, format='FFMPEG')
         video_paths.append(video_path)
     return video_paths
 
@@ -115,9 +133,13 @@ def main(cfg):
     if not np.isfinite(rollout_temperature) or rollout_temperature < 0:
         raise ValueError('rollout_temperature must be finite and nonnegative.')
 
+    _check_video_backend()
     env_names = get_environment_list(cfg.env_names)
     print(f"Resolved env_names from {cfg.env_names!r} to {env_names!r}", flush=True)
-    env = ParallelEnv(env_names, seed=cfg.seed, render_mode='rgb_array')
+    env = ParallelEnv(
+        env_names, seed=cfg.seed, render_mode='rgb_array',
+        dmc_camera_id=_get_cfg(cfg, 'rollout_dmc_camera_id', 0),
+    )
     try:
         agent = _build_agent(cfg, env, num_tasks=len(env.envs))
         agent.load(checkpoint_path)

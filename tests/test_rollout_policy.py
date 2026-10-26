@@ -1,4 +1,5 @@
 import tempfile
+import sys
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -40,14 +41,48 @@ class RolloutTests(unittest.TestCase):
         with initialize_config_dir(version_base=None, config_dir=str(config_dir)):
             self.cfg = compose(config_name='rollout')
 
-    def test_local_defaults(self):
+    def test_slurm_defaults(self):
         self.assertFalse(self.cfg.rollout_log_to_wandb)
         with initialize_config_dir(
             version_base=None,
             config_dir=str(Path(__file__).resolve().parents[1] / 'config'),
         ):
             cfg = compose(config_name='rollout', return_hydra_config=True)
-        self.assertEqual(cfg.hydra.launcher._target_, 'hydra._internal.core_plugins.basic_launcher.BasicLauncher')
+        self.assertEqual(
+            cfg.hydra.launcher._target_,
+            'hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher',
+        )
+
+    def test_slurm_partition_and_timeout_overrides(self):
+        with initialize_config_dir(
+            version_base=None,
+            config_dir=str(Path(__file__).resolve().parents[1] / 'config'),
+        ):
+            cfg = compose(
+                config_name='rollout',
+                overrides=[
+                    'hydra.launcher.partition=gpu_a100_short',
+                    'hydra.launcher.timeout_min=10',
+                ],
+                return_hydra_config=True,
+            )
+        self.assertEqual(cfg.hydra.launcher.partition, 'gpu_a100_short')
+        self.assertEqual(cfg.hydra.launcher.timeout_min, 10)
+
+    def test_local_launcher_override(self):
+        with initialize_config_dir(
+            version_base=None,
+            config_dir=str(Path(__file__).resolve().parents[1] / 'config'),
+        ):
+            cfg = compose(
+                config_name='rollout',
+                overrides=['hydra/launcher=basic'],
+                return_hydra_config=True,
+            )
+        self.assertEqual(
+            cfg.hydra.launcher._target_,
+            'hydra._internal.core_plugins.basic_launcher.BasicLauncher',
+        )
 
     def test_incomplete_checkpoint_fails_before_environment_creation(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -57,6 +92,34 @@ class RolloutTests(unittest.TestCase):
                 with self.assertRaisesRegex(FileNotFoundError, 'critic.txt.*target_critic.txt.*temp.txt'):
                     rollout_policy.main.__wrapped__(self.cfg)
             env.assert_not_called()
+
+    def test_missing_backend_reports_targeted_install(self):
+        with patch.dict(sys.modules, {'imageio_ffmpeg': None}):
+            with self.assertRaisesRegex(RuntimeError, 'pip install --no-deps.*imageio-ffmpeg==0.6.0'):
+                rollout_policy._check_video_backend()
+
+    def test_backend_checked_before_environment_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for name in ('actor', 'critic', 'target_critic', 'temp'):
+                (Path(directory) / f'{name}.txt').touch()
+            self.cfg.rollout_checkpoint_path = directory
+            with patch.object(rollout_policy, '_check_video_backend', side_effect=RuntimeError('no ffmpeg')):
+                with patch.object(rollout_policy, 'ParallelEnv') as env:
+                    with self.assertRaisesRegex(RuntimeError, 'no ffmpeg'):
+                        rollout_policy.main.__wrapped__(self.cfg)
+                env.assert_not_called()
+
+    def test_mp4_roundtrip(self):
+        rollout_policy._check_video_backend()
+        renders = np.zeros((1, 2, 3, 16, 16), dtype=np.uint8)
+        renders[:, 1] = 255
+        with tempfile.TemporaryDirectory() as directory:
+            paths = rollout_policy._save_videos(renders, ['task'], directory, fps=30)
+            frames = rollout_policy.imageio.mimread(paths[0], format='FFMPEG')
+        self.assertEqual(len(frames), 2)
+        self.assertEqual(frames[0].shape, (16, 16, 3))
+        self.assertLess(frames[0].mean(), 5)
+        self.assertGreater(frames[1].mean(), 250)
 
     def test_environment_closes_when_loading_fails(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -70,6 +133,7 @@ class RolloutTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'bad checkpoint'):
                     rollout_policy.main.__wrapped__(self.cfg)
                 self.assertEqual(env.call_args.kwargs['render_mode'], 'rgb_array')
+                self.assertEqual(env.call_args.kwargs['dmc_camera_id'], 0)
                 env.return_value.close.assert_called_once()
 
     def test_success_counts_stop_after_requested_episodes(self):

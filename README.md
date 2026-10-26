@@ -20,6 +20,17 @@ The wrapper forces `hydra/launcher=basic` so the training runs inside the alloca
 
 To record a checkpoint rollout:
 
+MP4 recording requires `imageio-ffmpeg`. To add only the pinned backend to an
+existing `dmcdime` environment, preserving all other installed package versions:
+
+```bash
+conda run -n dmcdime python -m pip install --no-deps --only-binary=:all: imageio-ffmpeg==0.6.0
+```
+
+This targeted install does not require rerunning `pip install -r requirements.txt`.
+The rollout script checks the backend before creating environments or evaluating
+the policy and reports the Python executable if the backend is unavailable.
+
 ```bash
 MUJOCO_GL=egl python3 rollout_policy.py env_names=HB_BASIC \
   rollout_checkpoint_path=/path/to/checkpoint/0
@@ -36,8 +47,31 @@ To reuse a training run's saved configuration, pass
 Relative checkpoint and output paths resolve from the directory where the command
 was launched. Videos are saved to `./rollout_videos` by default. Override
 `rollout_output_dir`, `rollout_episodes`, or `rollout_temperature` as needed;
-`rollout_log_to_wandb=true` enables W&B logging. The default rollout configuration
-runs locally with W&B logging disabled.
+`rollout_log_to_wandb=true` enables W&B logging. W&B logging is disabled by default.
+Without `--multirun`, rollouts execute locally.
+
+DMC videos use model camera `0` by default. For locomotion tasks such as walker,
+dog, and humanoid, this camera follows the robot. Set `rollout_dmc_camera_id=1`
+for an alternative model camera or `rollout_dmc_camera_id=-1` for the stationary
+free camera. Camera names are also accepted if every DMC task in the rollout
+defines that name. When using a saved training config without this option, add it
+with `+rollout_dmc_camera_id=1`; the default remains `0` when omitted.
+
+To submit a rollout to Slurm, use `--multirun` and override the partition and time
+limit on the inherited `submitit_slurm` launcher:
+
+```bash
+python3 rollout_policy.py env_names=MYO_HAND_EASY seed=0 \
+  rollout_checkpoint_path=/path/to/checkpoint/0 \
+  hydra.launcher.partition=gpu_a100_short hydra.launcher.timeout_min=10 --multirun
+```
+
+For local multiruns, explicitly select `hydra/launcher=basic`.
+
+For Slurm rollouts using `dmcdime`, add
+`hydra/launcher=submitit_slurm_dmc` to the command above. This launcher's setup
+activates `dmcdime`; the default `submitit_slurm` launcher activates `dime`.
+Partition and timeout overrides work with either Slurm launcher.
 
 ## Citation
 

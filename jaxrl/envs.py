@@ -33,7 +33,7 @@ class MyoSuiteRGBWrapper(gym.Wrapper):
             super().close()
 
 
-def _make_env_dmc(env_name: str, seed: int = 0, render_mode=None) -> gym.Env:
+def _make_env_dmc(env_name: str, seed: int = 0, render_mode=None, camera_id=0) -> gym.Env:
     try:
         from dmc_envs.tasks import cheetah, walker, hopper, reacher, ball_in_cup, pendulum, fish
     except:
@@ -48,7 +48,11 @@ def _make_env_dmc(env_name: str, seed: int = 0, render_mode=None) -> gym.Env:
         task_name=task_name,
         task_kwargs={'random': seed},
     )
-    env = DmControlCompatibilityV0(env, render_mode=render_mode)
+    # Camera 0 tracks the robot in DMC locomotion models; the default free
+    # camera (-1) stays at the initial scene position as the robot moves away.
+    env = DmControlCompatibilityV0(
+        env, render_mode=render_mode, render_kwargs={'camera_id': camera_id}
+    )
     if isinstance(env.observation_space, gym.spaces.Dict):
         env = FlattenObservation(env)
     env = RescaleAction(env, -1.0, 1.0)
@@ -93,7 +97,7 @@ def _make_env_myosuite(env_name, seed=0, num_env=1, render_mode=None):
             env = MyoSuiteRGBWrapper(env)
     return env
 
-def make_env(env_name: str, seed: int = 0, render_mode=None) -> gym.Env:
+def make_env(env_name: str, seed: int = 0, render_mode=None, dmc_camera_id=0) -> gym.Env:
     env = None
     if '-goal-observable' in env_name:
         env = _make_env_metaworld(env_name, seed, render_mode=render_mode)
@@ -102,14 +106,14 @@ def make_env(env_name: str, seed: int = 0, render_mode=None) -> gym.Env:
     elif '-v0' in env_name:
         env = _make_env_humanoidbench(env_name, seed, render_mode=render_mode)
     elif '-' in env_name:
-        env = _make_env_dmc(env_name, seed, render_mode=render_mode)
+        env = _make_env_dmc(env_name, seed, render_mode=render_mode, camera_id=dmc_camera_id)
     else:
         env = _make_env_shadowhand(env_name, seed, render_mode=render_mode)
     return env
 
 class ParallelEnv():
     
-    def __init__(self, env_names: list, seed: int = 0, render_mode=None):
+    def __init__(self, env_names: list, seed: int = 0, render_mode=None, dmc_camera_id=0):
         
         np.random.seed(seed)
         random.seed(seed)
@@ -118,7 +122,7 @@ class ParallelEnv():
         obs_dims = np.zeros(len(env_names), dtype=np.int32)
         act_dims = np.zeros(len(env_names), dtype=np.int32)
         for i, env_name in enumerate(env_names):
-            envs.append(make_env(env_name, seed, render_mode=render_mode))
+            envs.append(make_env(env_name, seed, render_mode=render_mode, dmc_camera_id=dmc_camera_id))
             obs_dims[i] = envs[-1].observation_space.shape[0]
             act_dims[i] = envs[-1].action_space.shape[0]
 

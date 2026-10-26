@@ -4,6 +4,7 @@ jax[cuda12_pip]==0.4.35
 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 flax
 imageio
+imageio-ffmpeg==0.6.0
 wandb
 wandb[media]
 hydra-core
