@@ -139,6 +139,7 @@ def main(cfg):
     env = ParallelEnv(
         env_names, seed=cfg.seed, render_mode='rgb_array',
         dmc_camera_id=_get_cfg(cfg, 'rollout_dmc_camera_id', 0),
+        myo_camera_id=_get_cfg(cfg, 'rollout_myo_camera_id', 'auto'),
     )
     try:
         agent = _build_agent(cfg, env, num_tasks=len(env.envs))

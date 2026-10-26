@@ -134,6 +134,7 @@ class RolloutTests(unittest.TestCase):
                     rollout_policy.main.__wrapped__(self.cfg)
                 self.assertEqual(env.call_args.kwargs['render_mode'], 'rgb_array')
                 self.assertEqual(env.call_args.kwargs['dmc_camera_id'], 0)
+                self.assertEqual(env.call_args.kwargs['myo_camera_id'], 'auto')
                 env.return_value.close.assert_called_once()
 
     def test_success_counts_stop_after_requested_episodes(self):
@@ -160,10 +161,35 @@ class RolloutTests(unittest.TestCase):
         env = MyoSuiteRGBWrapper(task)
         self.assertEqual(env.render_mode, 'rgb_array')
         self.assertIs(env.render(), expected)
-        task.sim.renderer.render_offscreen.assert_called_once_with(width=640, height=480)
+        task.sim.renderer.render_offscreen.assert_called_once_with(
+            width=640, height=480, camera_id='hand_side_inter',
+        )
         env.close()
         task.sim.renderer.close.assert_called_once()
         self.assertTrue(task.closed)
+
+    def test_myosuite_camera_falls_back_for_other_models(self):
+        task = EpisodeEnv(1)
+        task.sim = Mock()
+        task.sim.model.camera_name2id.side_effect = ValueError('no hand camera')
+        env = MyoSuiteRGBWrapper(task)
+        env.render()
+        task.sim.renderer.render_offscreen.assert_called_once_with(
+            width=640, height=480, camera_id=-1,
+        )
+        env.close()
+
+    def test_myosuite_camera_override(self):
+        for camera_id in ('hand_top', 'plam_lookat', -1):
+            with self.subTest(camera_id=camera_id):
+                task = EpisodeEnv(1)
+                task.sim = Mock()
+                env = MyoSuiteRGBWrapper(task, camera_id=camera_id)
+                env.render()
+                task.sim.renderer.render_offscreen.assert_called_once_with(
+                    width=640, height=480, camera_id=camera_id,
+                )
+                env.close()
 
 
 if __name__ == '__main__':

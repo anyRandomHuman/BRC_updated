@@ -4,3 +4,4 @@ defaults:
 
 rollout_log_to_wandb: false
 rollout_dmc_camera_id: 0
+rollout_myo_camera_id: auto

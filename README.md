@@ -57,6 +57,14 @@ free camera. Camera names are also accepted if every DMC task in the rollout
 defines that name. When using a saved training config without this option, add it
 with `+rollout_dmc_camera_id=1`; the default remains `0` when omitted.
 
+MyoSuite hand videos default to a close side view rather than the distant room
+camera. `rollout_myo_camera_id=auto` selects `hand_side_inter` when available and
+falls back to the free camera for other models. Override it with
+`rollout_myo_camera_id=hand_top` for a top view,
+`rollout_myo_camera_id=plam_lookat` for the model's palm view (the spelling is from
+MyoSuite), or `rollout_myo_camera_id=-1` for the original room view. With a saved
+training config that lacks this option, prefix the override with `+`.
+
 To submit a rollout to Slurm, use `--multirun` and override the partition and time
 limit on the inherited `submitit_slurm` launcher:
 

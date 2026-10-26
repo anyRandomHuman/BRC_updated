@@ -19,12 +19,27 @@ class FlattenObservationShadowhandWrapper(gym.ObservationWrapper):
 class MyoSuiteRGBWrapper(gym.Wrapper):
     """Expose MyoSuite's offscreen renderer through the Gymnasium API."""
 
+    def __init__(self, env, camera_id='auto'):
+        super().__init__(env)
+        if camera_id == 'auto':
+            # Hand models include a close side view. Other MyoSuite models
+            # retain the free camera when this model camera is unavailable.
+            try:
+                self.unwrapped.sim.model.camera_name2id('hand_side_inter')
+            except ValueError:
+                camera_id = -1
+            else:
+                camera_id = 'hand_side_inter'
+        self.camera_id = camera_id
+
     @property
     def render_mode(self):
         return 'rgb_array'
 
     def render(self):
-        return self.unwrapped.sim.renderer.render_offscreen(width=640, height=480)
+        return self.unwrapped.sim.renderer.render_offscreen(
+            width=640, height=480, camera_id=self.camera_id,
+        )
 
     def close(self):
         try:
@@ -86,7 +101,7 @@ def _make_env_shadowhand(env_name: str, seed: int = 0, render_mode=None) -> gym.
     env = FlattenObservationShadowhandWrapper(env)
     return env
 
-def _make_env_myosuite(env_name, seed=0, num_env=1, render_mode=None):
+def _make_env_myosuite(env_name, seed=0, num_env=1, render_mode=None, camera_id='auto'):
     import myosuite
     if num_env > 1:
         env = gym.make_vec(env_name, num_envs=num_env,vectorization_mode="sync", render_mode=render_mode)
@@ -94,15 +109,15 @@ def _make_env_myosuite(env_name, seed=0, num_env=1, render_mode=None):
         # MyoSuite uses sim.renderer rather than Gymnasium's render_mode.
         env = gym.make(env_name, autoreset=False)
         if render_mode == 'rgb_array':
-            env = MyoSuiteRGBWrapper(env)
+            env = MyoSuiteRGBWrapper(env, camera_id=camera_id)
     return env
 
-def make_env(env_name: str, seed: int = 0, render_mode=None, dmc_camera_id=0) -> gym.Env:
+def make_env(env_name: str, seed: int = 0, render_mode=None, dmc_camera_id=0, myo_camera_id='auto') -> gym.Env:
     env = None
     if '-goal-observable' in env_name:
         env = _make_env_metaworld(env_name, seed, render_mode=render_mode)
     elif 'myo' in env_name:
-        env = _make_env_myosuite(env_name, seed, render_mode=render_mode)
+        env = _make_env_myosuite(env_name, seed, render_mode=render_mode, camera_id=myo_camera_id)
     elif '-v0' in env_name:
         env = _make_env_humanoidbench(env_name, seed, render_mode=render_mode)
     elif '-' in env_name:
@@ -113,7 +128,7 @@ def make_env(env_name: str, seed: int = 0, render_mode=None, dmc_camera_id=0) ->
 
 class ParallelEnv():
     
-    def __init__(self, env_names: list, seed: int = 0, render_mode=None, dmc_camera_id=0):
+    def __init__(self, env_names: list, seed: int = 0, render_mode=None, dmc_camera_id=0, myo_camera_id='auto'):
         
         np.random.seed(seed)
         random.seed(seed)
@@ -122,7 +137,10 @@ class ParallelEnv():
         obs_dims = np.zeros(len(env_names), dtype=np.int32)
         act_dims = np.zeros(len(env_names), dtype=np.int32)
         for i, env_name in enumerate(env_names):
-            envs.append(make_env(env_name, seed, render_mode=render_mode, dmc_camera_id=dmc_camera_id))
+            envs.append(make_env(
+                env_name, seed, render_mode=render_mode,
+                dmc_camera_id=dmc_camera_id, myo_camera_id=myo_camera_id,
+            ))
             obs_dims[i] = envs[-1].observation_space.shape[0]
             act_dims[i] = envs[-1].action_space.shape[0]
 
