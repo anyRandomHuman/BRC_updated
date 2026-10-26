@@ -16,7 +16,24 @@ class FlattenObservationShadowhandWrapper(gym.ObservationWrapper):
     def observation(self, obs: dict) -> np.ndarray:
         return np.concatenate((obs['observation'], obs['desired_goal']), axis=-1)
 
-def _make_env_dmc(env_name: str, seed: int = 0) -> gym.Env:
+class MyoSuiteRGBWrapper(gym.Wrapper):
+    """Expose MyoSuite's offscreen renderer through the Gymnasium API."""
+
+    @property
+    def render_mode(self):
+        return 'rgb_array'
+
+    def render(self):
+        return self.unwrapped.sim.renderer.render_offscreen(width=640, height=480)
+
+    def close(self):
+        try:
+            self.unwrapped.sim.renderer.close()
+        finally:
+            super().close()
+
+
+def _make_env_dmc(env_name: str, seed: int = 0, render_mode=None) -> gym.Env:
     try:
         from dmc_envs.tasks import cheetah, walker, hopper, reacher, ball_in_cup, pendulum, fish
     except:
@@ -31,35 +48,37 @@ def _make_env_dmc(env_name: str, seed: int = 0) -> gym.Env:
         task_name=task_name,
         task_kwargs={'random': seed},
     )
-    # render_kwargs={'camera_id': 1}, render_mode='rgb_array'
-    env = DmControlCompatibilityV0(env)
+    env = DmControlCompatibilityV0(env, render_mode=render_mode)
     if isinstance(env.observation_space, gym.spaces.Dict):
         env = FlattenObservation(env)
     env = RescaleAction(env, -1.0, 1.0)
     return env
 
-def _make_env_metaworld(env_name: str, seed: int = 0) -> gym.Env:
+def _make_env_metaworld(env_name: str, seed: int = 0, render_mode=None) -> gym.Env:
     try:
         constructor = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[env_name]
     except:
         from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE)
         constructor = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[env_name]
-    env = constructor(seed=int(seed))
+    kwargs = {'render_mode': render_mode} if render_mode is not None else {}
+    env = constructor(seed=int(seed), **kwargs)
     env = TimeLimit(env, 200)
     return env
     
-def _make_env_humanoidbench(env_name: str, seed: int = 0) -> gym.Env:
+def _make_env_humanoidbench(env_name: str, seed: int = 0, render_mode=None) -> gym.Env:
     import humanoid_bench
     from humanoid_bench.env import ROBOTS, TASKS
-    env = gym.make(env_name, autoreset=False)
+    kwargs = {'render_mode': render_mode} if render_mode is not None else {}
+    env = gym.make(env_name, autoreset=False, **kwargs)
     return env
 
-def _make_env_shadowhand(env_name: str, seed: int = 0) -> gym.Env:
+def _make_env_shadowhand(env_name: str, seed: int = 0, render_mode=None) -> gym.Env:
     import dex_envs
     env_version = 'v1'
     reward_type = 'sparse'
     name = f'{env_name}-rotate-{env_version}'
-    env = gym.make(name, reward_type=reward_type)
+    kwargs = {'render_mode': render_mode} if render_mode is not None else {}
+    env = gym.make(name, reward_type=reward_type, **kwargs)
     env = FlattenObservationShadowhandWrapper(env)
     return env
 
@@ -68,26 +87,29 @@ def _make_env_myosuite(env_name, seed=0, num_env=1, render_mode=None):
     if num_env > 1:
         env = gym.make_vec(env_name, num_envs=num_env,vectorization_mode="sync", render_mode=render_mode)
     else:
-        env = gym.make(env_name, autoreset=False, render_mode=render_mode)
+        # MyoSuite uses sim.renderer rather than Gymnasium's render_mode.
+        env = gym.make(env_name, autoreset=False)
+        if render_mode == 'rgb_array':
+            env = MyoSuiteRGBWrapper(env)
     return env
 
-def make_env(env_name: str, seed: int = 0) -> gym.Env:
+def make_env(env_name: str, seed: int = 0, render_mode=None) -> gym.Env:
     env = None
     if '-goal-observable' in env_name:
-        env = _make_env_metaworld(env_name, seed)
+        env = _make_env_metaworld(env_name, seed, render_mode=render_mode)
     elif 'myo' in env_name:
-        env = _make_env_myosuite(env_name, seed)
+        env = _make_env_myosuite(env_name, seed, render_mode=render_mode)
     elif '-v0' in env_name:
-        env = _make_env_humanoidbench(env_name, seed)
+        env = _make_env_humanoidbench(env_name, seed, render_mode=render_mode)
     elif '-' in env_name:
-        env = _make_env_dmc(env_name, seed)
+        env = _make_env_dmc(env_name, seed, render_mode=render_mode)
     else:
-        env = _make_env_shadowhand(env_name, seed)
+        env = _make_env_shadowhand(env_name, seed, render_mode=render_mode)
     return env
 
 class ParallelEnv():
     
-    def __init__(self, env_names: list, seed: int = 0):
+    def __init__(self, env_names: list, seed: int = 0, render_mode=None):
         
         np.random.seed(seed)
         random.seed(seed)
@@ -96,7 +118,7 @@ class ParallelEnv():
         obs_dims = np.zeros(len(env_names), dtype=np.int32)
         act_dims = np.zeros(len(env_names), dtype=np.int32)
         for i, env_name in enumerate(env_names):
-            envs.append(make_env(env_name, seed))
+            envs.append(make_env(env_name, seed, render_mode=render_mode))
             obs_dims[i] = envs[-1].observation_space.shape[0]
             act_dims[i] = envs[-1].action_space.shape[0]
 
@@ -170,6 +192,10 @@ class ParallelEnv():
         return np.stack(states), np.stack(rewards), np.stack(terminals), np.stack(truncates), np.stack(goals)   
 
     def evaluate(self, agent, num_episodes, temperature=0.0, render=False, max_render_steps=5000, render_frameskip=4):
+        if num_episodes <= 0:
+            raise ValueError('num_episodes must be positive.')
+        if render and (max_render_steps <= 0 or render_frameskip <= 0):
+            raise ValueError('max_render_steps and render_frameskip must be positive.')
         n_rollouts = np.zeros(self.num_tasks)
         returns = np.zeros(self.num_tasks)
         goals = np.zeros(self.num_tasks)
@@ -189,7 +215,7 @@ class ParallelEnv():
             #actions = envs.action_space.sample()
             next_observations, rewards, terms, truns, success = self.step(actions)
             returns += rewards * mask
-            goals += success * mask_goals
+            goals += success * mask_goals * mask
             mask_goals = np.where(success, 0, mask_goals)
             mask_goals = np.where(np.logical_or(terms, truns), 1, mask_goals)
             observations = next_observations
@@ -213,3 +239,7 @@ class ParallelEnv():
             renders.append(render)
         renders = np.stack(renders)
         return renders
+
+    def close(self):
+        for env in self.envs:
+            env.close()

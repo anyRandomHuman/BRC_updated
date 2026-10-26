@@ -3,6 +3,7 @@ import traceback
 from pathlib import Path
 
 import hydra
+from hydra.utils import to_absolute_path
 import imageio.v2 as imageio
 import numpy as np
 import wandb
@@ -75,49 +76,67 @@ def _save_videos(renders, env_names, output_dir, fps):
     return video_paths
 
 
-@hydra.main(config_path='config', config_name='default')
+@hydra.main(version_base=None, config_path='config', config_name='rollout')
 def main(cfg):
     if cfg.disable_jit:
         import jax
         jax.config.update("jax_disable_jit", True)
 
-    env_names = get_environment_list(cfg.env_names)
-    print(f"Resolved env_names from {cfg.env_names!r} to {env_names!r}", flush=True)
-
-    env = ParallelEnv(env_names, seed=cfg.seed)
-    agent = _build_agent(cfg, env, num_tasks=len(env.envs))
-
     checkpoint_path = _get_cfg(cfg, 'rollout_checkpoint_path', '')
-    if checkpoint_path == '':
+    if not checkpoint_path:
         checkpoint_path = _default_checkpoint_path(cfg)
-    checkpoint_path = os.path.abspath(checkpoint_path)
+    checkpoint_path = to_absolute_path(checkpoint_path)
     print(f'Loading checkpoint from {checkpoint_path}', flush=True)
-    if not os.path.exists(os.path.join(checkpoint_path, 'actor.txt')):
+    missing_files = [
+        name for name in ('actor.txt', 'critic.txt', 'target_critic.txt', 'temp.txt')
+        if not (Path(checkpoint_path) / name).is_file()
+    ]
+    if missing_files:
         raise FileNotFoundError(
-            f'Checkpoint must be a directory containing actor.txt: {checkpoint_path}'
+            f'Incomplete BRC checkpoint at {checkpoint_path}; '
+            f'missing: {", ".join(missing_files)}. '
+            'Use the directory written by agent.save().'
         )
-    agent.load(checkpoint_path)
 
     rollout_episodes = int(_get_cfg(cfg, 'rollout_episodes', cfg.eval_episodes))
     rollout_temperature = float(_get_cfg(cfg, 'rollout_temperature', 0.0))
     max_render_steps = int(_get_cfg(cfg, 'rollout_max_render_steps', 5000))
     render_frameskip = int(_get_cfg(cfg, 'rollout_render_frameskip', 4))
     video_fps = int(_get_cfg(cfg, 'rollout_video_fps', 15))
-    output_dir = _get_cfg(cfg, 'rollout_output_dir', './rollout_videos')
+    output_dir = to_absolute_path(_get_cfg(cfg, 'rollout_output_dir', './rollout_videos'))
+    for name, value in (
+        ('rollout_episodes', rollout_episodes),
+        ('rollout_max_render_steps', max_render_steps),
+        ('rollout_render_frameskip', render_frameskip),
+        ('rollout_video_fps', video_fps),
+    ):
+        if value <= 0:
+            raise ValueError(f'{name} must be positive, got {value}.')
+    if not np.isfinite(rollout_temperature) or rollout_temperature < 0:
+        raise ValueError('rollout_temperature must be finite and nonnegative.')
 
-    print(
-        f'Rolling out {rollout_episodes} episode(s) per task '
-        f'with temperature={rollout_temperature}',
-        flush=True,
-    )
-    eval_stats = env.evaluate(
-        agent,
-        num_episodes=rollout_episodes,
-        temperature=rollout_temperature,
-        render=True,
-        max_render_steps=max_render_steps,
-        render_frameskip=render_frameskip,
-    )
+    env_names = get_environment_list(cfg.env_names)
+    print(f"Resolved env_names from {cfg.env_names!r} to {env_names!r}", flush=True)
+    env = ParallelEnv(env_names, seed=cfg.seed, render_mode='rgb_array')
+    try:
+        agent = _build_agent(cfg, env, num_tasks=len(env.envs))
+        agent.load(checkpoint_path)
+
+        print(
+            f'Rolling out {rollout_episodes} episode(s) per task '
+            f'with temperature={rollout_temperature}',
+            flush=True,
+        )
+        eval_stats = env.evaluate(
+            agent,
+            num_episodes=rollout_episodes,
+            temperature=rollout_temperature,
+            render=True,
+            max_render_steps=max_render_steps,
+            render_frameskip=render_frameskip,
+        )
+    finally:
+        env.close()
 
     video_paths = _save_videos(eval_stats['renders'], env_names, output_dir, video_fps)
     for video_path in video_paths:
@@ -126,7 +145,7 @@ def main(cfg):
     print(f"Returns: {dict(zip(env_names, eval_stats['return']))}", flush=True)
     print(f"Goals: {dict(zip(env_names, eval_stats['goal']))}", flush=True)
 
-    if cfg.rollout_log_to_wandb:
+    if _get_cfg(cfg, 'rollout_log_to_wandb', False):
         wandb.init(
             config=OmegaConf.to_container(cfg, resolve=True),
             entity=cfg.wandb.entity,
