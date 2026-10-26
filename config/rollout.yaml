@@ -1,0 +1,6 @@
+defaults:
+  - default
+  - override hydra/launcher: basic
+  - _self_
+
+rollout_log_to_wandb: false

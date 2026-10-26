@@ -51,5 +51,6 @@ wandb:
 famo:
   famo_w_regu: 0.
   famo_kl_eps: 0.01
+  famo_actor_tau: 0.2
 
 task_weight_ratio_bound: 3

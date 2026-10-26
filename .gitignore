@@ -6,3 +6,8 @@ wandb/*
 *.png
 checkpoints/*
 outputs/*
+*.xml
+*.mp4
+.vscode/*
+.idea/*
+.codex*
